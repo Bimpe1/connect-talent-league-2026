@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Connect Talent League 2026</title>
+    
+    <!-- Mobile App & PWA Meta Tags for iOS & Android -->
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="CT League" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48cmVjdCB3aWR0aD0nMTAwJyBoZWlnaHQ9JzEwMCcgcng9JzI1JyBmaWxsPScjMjU2M2ViJy8+PHRleHQgeD0nNTAnIHk9JzY1JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LWZhbWlseT0nc2Fucy1zZXJpZicgZm9udC13ZWlnaHQ9JzkwMCcgZm9udC1zaXplPSc0OCcgZmlsbD0nd2hpdGUnPkNUPC90ZXh0Pjwvc3ZnPg==" />
+
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+              heading: ['Outfit', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                50: '#f0f6fe',
+                100: '#ddeafd',
+                200: '#c2dcfc',
+                300: '#9ac5fa',
+                400: '#6ba5f6',
+                500: '#4683f1',
+                600: '#2f65e5',
+                700: '#2550d2',
+                800: '#2341aa',
+                900: '#213986',
+                950: '#182452',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Safe area padding for notch & home bar */
+      :root {
+        --sat: env(safe-area-inset-top, 0px);
+        --sab: env(safe-area-inset-bottom, 0px);
+        --sal: env(safe-area-inset-left, 0px);
+        --sar: env(safe-area-inset-right, 0px);
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        padding-top: var(--sat);
+        padding-bottom: var(--sab);
+        padding-left: var(--sal);
+        padding-right: var(--sar);
+        -webkit-tap-highlight-color: transparent;
+      }
+      h1, h2, h3, h4, .font-heading {
+        font-family: 'Outfit', system-ui, sans-serif;
+      }
+      /* Prevent iOS Safari auto-zoom on input focus by keeping font size at least 16px */
+      @media screen and (max-width: 768px) {
+        input, select, textarea {
+          font-size: 16px !important;
+        }
+      }
+      /* Custom smooth scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

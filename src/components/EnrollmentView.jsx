@@ -1,0 +1,318 @@
+import React, { useState } from 'react';
+import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check } from 'lucide-react';
+import { TEAMS } from '../data/curriculum';
+
+export default function EnrollmentView({ 
+  onEnroll, 
+  onSelectExistingUser,
+  existingParticipants = [],
+  onOpenCaptainLogin 
+}) {
+  const [tab, setTab] = useState('enroll'); // 'enroll' or 'signin'
+
+  // Enrollment fields
+  const [displayName, setDisplayName] = useState('');
+  const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
+  const [selectedTeamId, setSelectedTeamId] = useState(TEAMS[0].id);
+  const [enrollError, setEnrollError] = useState('');
+
+  // Sign in fields
+  const [signInName, setSignInName] = useState('');
+  const [signInError, setSignInError] = useState('');
+
+  // Handle New Participant Enrollment
+  const handleEnrollSubmit = (e) => {
+    e.preventDefault();
+    setEnrollError('');
+
+    const cleanName = displayName.trim();
+    if (!cleanName) {
+      setEnrollError('Please enter an approved display name (e.g. Jordan T.)');
+      return;
+    }
+
+    // Check for duplicate name (case-insensitive)
+    const isDuplicate = existingParticipants.some(
+      p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      setEnrollError(
+        `"${cleanName}" is already enrolled. If this is you, click "Sign In" above. If you are another participant with the same name, please add an extra initial or number (e.g. ${cleanName} 2).`
+      );
+      return;
+    }
+
+    const team = TEAMS.find(t => t.id === selectedTeamId) || TEAMS[0];
+    onEnroll({
+      name: cleanName,
+      role,
+      teamId: team.id,
+      teamName: team.name,
+    });
+  };
+
+  // Handle Returning Participant Sign In
+  const handleSignInSubmit = (e) => {
+    e.preventDefault();
+    setSignInError('');
+
+    const cleanName = signInName.trim();
+    if (!cleanName) {
+      setSignInError('Please enter your enrolled display name.');
+      return;
+    }
+
+    // Lookup participant
+    const found = existingParticipants.find(
+      p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+
+    if (!found) {
+      setSignInError(
+        `No enrolled participant found matching "${cleanName}". Please verify the spelling or click "Enroll as New" to register.`
+      );
+      return;
+    }
+
+    onSelectExistingUser(found);
+  };
+
+  return (
+    <div className="max-w-xl mx-auto py-5 sm:py-8 px-3.5 sm:px-4 space-y-6">
+      
+      {/* Welcome Banner */}
+      <div className="text-center space-y-1 pb-1">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading tracking-tight">
+          Connect Talent League 2026
+        </h1>
+      </div>
+
+      {/* Mode Switcher Tabs: Enroll vs Sign In */}
+      <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-1.5">
+        <button
+          type="button"
+          onClick={() => { setTab('enroll'); setEnrollError(''); setSignInError(''); }}
+          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition border ${
+            tab === 'enroll'
+              ? 'bg-white text-slate-900 border-slate-300 shadow-sm'
+              : 'text-slate-600 border-transparent hover:text-slate-900'
+          }`}
+        >
+          <UserPlus size={16} />
+          <span>Enroll as New</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setTab('signin'); setEnrollError(''); setSignInError(''); }}
+          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition border ${
+            tab === 'signin'
+              ? 'bg-white text-slate-900 border-slate-300 shadow-sm'
+              : 'text-slate-600 border-transparent hover:text-slate-900'
+          }`}
+        >
+          <LogIn size={16} />
+          <span>Returning Sign-In</span>
+        </button>
+      </div>
+
+      {/* Main Card */}
+      <div className="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border border-slate-200 space-y-6">
+        
+        {/* ======================================================== */}
+        {/* TAB 1: ENROLL AS NEW                                     */}
+        {/* ======================================================== */}
+        {tab === 'enroll' && (
+          <form onSubmit={handleEnrollSubmit} className="space-y-6">
+            
+            {/* Error Notification */}
+            {enrollError && (
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium">
+                <AlertCircle size={18} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span>{enrollError}</span>
+                  {enrollError.includes('already enrolled') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTab('signin');
+                        setSignInName(displayName);
+                        setSignInError('');
+                        setEnrollError('');
+                      }}
+                      className="block mt-2 font-bold underline text-rose-900 hover:text-rose-950"
+                    >
+                      Switch to Sign In as "{displayName}" →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Display Name */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                1. Approved Display Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Jordan T. (First name & initial)"
+                value={displayName}
+                onChange={e => { setDisplayName(e.target.value); setEnrollError(''); }}
+                className="w-full border-2 border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                required
+              />
+              <span className="text-xs text-slate-400 block font-normal">
+                Choose a unique display name. Only your approved display name is visible on leaderboards.
+              </span>
+            </div>
+
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                2. Your Role
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('learner')}
+                  className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                    role === 'learner'
+                      ? 'border-blue-600 bg-blue-50/60 text-blue-900 shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <div>
+                    <span className="font-bold text-sm sm:text-base block">Learner</span>
+                    <span className="text-xs text-slate-500 font-normal">Building digital skills</span>
+                  </div>
+                  {role === 'learner' && <Check size={18} className="text-blue-600" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('volunteer')}
+                  className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                    role === 'volunteer'
+                      ? 'border-blue-600 bg-blue-50/60 text-blue-900 shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <div>
+                    <span className="font-bold text-sm sm:text-base block">Volunteer</span>
+                    <span className="text-xs text-slate-500 font-normal">Supporting peers</span>
+                  </div>
+                  {role === 'volunteer' && <Check size={18} className="text-blue-600" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Team Selection */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                3. Choose Your Team (From the 7 Official Teams)
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {TEAMS.map(t => {
+                  const isSelected = selectedTeamId === t.id;
+                  const enrolledCount = existingParticipants.filter(p => p.teamId === t.id).length;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setSelectedTeamId(t.id)}
+                      className={`p-3 rounded-xl border-2 text-left transition flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      <span className="font-bold text-sm block">{t.name}</span>
+                      <span className="text-[11px] text-slate-400 mt-1">{enrolledCount}/{t.capacity} places</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition active:scale-95"
+            >
+              <span>Enroll &amp; Start League</span>
+              <ArrowRight size={18} />
+            </button>
+          </form>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 2: RETURNING PARTICIPANT SIGN IN                     */}
+        {/* ======================================================== */}
+        {tab === 'signin' && (
+          <form onSubmit={handleSignInSubmit} className="space-y-6">
+            
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+              Enter the approved display name you used when you enrolled to access your daily challenges, submissions, and badges.
+            </div>
+
+            {/* Error Notification */}
+            {signInError && (
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium">
+                <AlertCircle size={18} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span>{signInError}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setTab('enroll'); setSignInError(''); }}
+                    className="block mt-2 font-bold underline text-rose-900 hover:text-rose-950"
+                  >
+                    Go to Enroll as New →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Display Name Input */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Your Enrolled Display Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Jordan T."
+                value={signInName}
+                onChange={e => { setSignInName(e.target.value); setSignInError(''); }}
+                className="w-full border-2 border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                required
+                autoFocus
+              />
+              <span className="text-xs text-slate-400 block font-normal">
+                Case-insensitive (e.g. "jordan t" or "Jordan T.")
+              </span>
+            </div>
+
+            {/* Sign In Button */}
+            <button
+              type="submit"
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition active:scale-95"
+            >
+              <LogIn size={18} />
+              <span>Sign In to My Account</span>
+            </button>
+          </form>
+        )}
+      </div>
+
+      {/* Captain Sign-In Link */}
+      <div className="text-center pt-2">
+        <button
+          onClick={onOpenCaptainLogin}
+          className="text-xs sm:text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-xl transition shadow-sm"
+        >
+          Facilitator / Captain Sign-In &amp; Register
+        </button>
+      </div>
+    </div>
+  );
+}

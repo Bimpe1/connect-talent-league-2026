@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Check if user has verified Captain claim
+    function isCaptain() {
+      return isAuthenticated() && request.auth.token.role == 'captain';
+    }
+
+    // Helper: Check if user is the submission owner
+    function isOwner(participantId) {
+      return isAuthenticated() && request.auth.uid == participantId;
+    }
+
+    // Rules for submissions collection
+    match /submissions/{submissionId} {
+      // 1. Read: Captains can read all submissions. Participants can ONLY read their own.
+      allow read: if isCaptain() || (isAuthenticated() && resource.data.participantId == request.auth.uid);
+
+      // 2. Create: Authenticated participants can create pending submissions.
+      // - Must set participantId to their own auth UID
+      // - Cannot set status to 'approved'
+      // - Cannot forge aiScore (handled by Cloud Function)
+      allow create: if isAuthenticated() 
+                    && request.resource.data.participantId == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && (!('approvedBy' in request.resource.data));
+
+      // 3. Update: ONLY Captains can approve submissions or adjust scores.
+      // Participants CANNOT update existing submissions once submitted.
+      allow update: if isCaptain() 
+                    && request.resource.data.participantId == resource.data.participantId;
+
+      // 4. Delete: No one is allowed to delete submissions (audit trail)
+      allow delete: if false;
+    }
+
+    // Rules for user profile collection
+    match /users/{userId} {
+      // Read own profile, captain can read all
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isCaptain());
+      // Users cannot change their own role field
+      allow write: if isCaptain();
+    }
+  }
+}
