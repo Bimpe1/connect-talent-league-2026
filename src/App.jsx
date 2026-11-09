@@ -602,8 +602,8 @@ export default function App() {
 
       {/* Footer on all pages */}
       <footer className="py-5 text-center text-xs sm:text-sm text-slate-500 border-t border-slate-200 bg-white">
-        <div className="max-w-4xl mx-auto px-4 flex items-center justify-center gap-1.5 font-medium">
-          <span>Made with ❤️ by</span>
+        <div className="max-w-4xl mx-auto px-4 flex items-center justify-center gap-1 font-medium">
+          <span>Built by</span>
           <span className="font-bold text-slate-900">Adebimpe Adetoba</span>
         </div>
       </footer>
