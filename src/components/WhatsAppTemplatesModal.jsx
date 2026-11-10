@@ -9,14 +9,14 @@ export default function WhatsAppTemplatesModal({
   weeks
 }) {
   const [templateType, setTemplateType] = useState('daily'); // 'daily' or 'results'
-  const [selectedWeek, setSelectedWeek] = useState(2);
+  const [selectedWeek, setSelectedWeek] = useState(1);
   const [selectedDay, setSelectedDay] = useState(0);
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
   const activeWeeks = weeks || DEFAULT_WEEKS;
-  const currentWeek = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[1];
+  const currentWeek = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[0];
   const currentChallenge = currentWeek.challenges[selectedDay] || currentWeek.challenges[0];
 
   // Daily Challenge Text
