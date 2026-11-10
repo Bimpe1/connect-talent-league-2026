@@ -251,7 +251,6 @@ export default function App() {
       return p;
     }));
 
-    alert("Submitted! Your evidence has been sent to your Captain for review.");
   };
 
   // Captain Approves Submission
