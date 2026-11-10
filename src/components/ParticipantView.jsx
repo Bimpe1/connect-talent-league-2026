@@ -16,8 +16,6 @@ import {
   Award,
   Trophy,
   X,
-  Heart,
-  ThumbsUp,
   HelpCircle,
   ShieldCheck
 } from 'lucide-react';
@@ -47,24 +45,6 @@ export default function ParticipantView({
   const [confettiActive, setConfettiActive] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [lastSubmittedTitle, setLastSubmittedTitle] = useState('');
-
-  // Safe 1-Click Peer Cheers State (persisted locally)
-  const [teamCheers, setTeamCheers] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ct_cheers_2026');
-      return saved ? JSON.parse(saved) : { clap: 14, brain: 9, rocket: 18, fire: 12 };
-    } catch (e) {
-      return { clap: 14, brain: 9, rocket: 18, fire: 12 };
-    }
-  });
-
-  const handleCheer = (type) => {
-    setTeamCheers(prev => {
-      const updated = { ...prev, [type]: prev[type] + 1 };
-      try { localStorage.setItem('ct_cheers_2026', JSON.stringify(updated)); } catch (e) {}
-      return updated;
-    });
-  };
 
   const activeWeeks = weeks || DEFAULT_WEEKS;
   const currentWeekData = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[1];
@@ -447,60 +427,7 @@ export default function ParticipantView({
       </div>
 
       {/* ============================================================== */}
-      {/* 5. TEAM CHEER WALL (1-Click Safe Peer Encouragement)           */}
-      {/* ============================================================== */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <div className="flex items-center gap-2">
-            <span className="text-base">🙌</span>
-            <h4 className="font-bold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
-              {currentUser.teamName || 'Team'} Cheer Wall
-            </h4>
-          </div>
-          <span className="text-xs text-slate-400 font-medium">Tap to cheer on your team</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <button
-            type="button"
-            onClick={() => handleCheer('clap')}
-            className="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-2xl flex items-center justify-between transition active:scale-95 text-xs font-bold text-slate-800"
-          >
-            <span>👏 Great Effort!</span>
-            <span className="bg-white px-2 py-0.5 rounded-full border border-slate-200 text-blue-700">{teamCheers.clap}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleCheer('brain')}
-            className="p-3 bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-2xl flex items-center justify-between transition active:scale-95 text-xs font-bold text-slate-800"
-          >
-            <span>💡 Clever Idea!</span>
-            <span className="bg-white px-2 py-0.5 rounded-full border border-slate-200 text-purple-700">{teamCheers.brain}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleCheer('rocket')}
-            className="p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-2xl flex items-center justify-between transition active:scale-95 text-xs font-bold text-slate-800"
-          >
-            <span>🚀 Team Spirit!</span>
-            <span className="bg-white px-2 py-0.5 rounded-full border border-slate-200 text-amber-700">{teamCheers.rocket}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleCheer('fire')}
-            className="p-3 bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-2xl flex items-center justify-between transition active:scale-95 text-xs font-bold text-slate-800"
-          >
-            <span>🔥 On Fire!</span>
-            <span className="bg-white px-2 py-0.5 rounded-full border border-slate-200 text-rose-700">{teamCheers.fire}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ============================================================== */}
-      {/* 6. RECENT SUBMISSIONS HISTORY                                  */}
+      {/* 5. RECENT SUBMISSIONS HISTORY                                  */}
       {/* ============================================================== */}
       {mySubmissions.length > 0 && (
         <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-3.5">
