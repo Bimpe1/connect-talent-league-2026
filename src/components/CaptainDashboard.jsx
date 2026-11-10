@@ -35,7 +35,7 @@ export default function CaptainDashboard({
   const [teamFilter, setTeamFilter] = useState('all');
 
   // Challenge Editor Form State
-  const [editWeekNum, setEditWeekNum] = useState(2);
+  const [editWeekNum, setEditWeekNum] = useState(1);
   const [editDayIndex, setEditDayIndex] = useState(0);
 
   const selectedWeekData = (weeks || DEFAULT_WEEKS).find(w => w.weekNumber === editWeekNum) || (weeks || DEFAULT_WEEKS)[0];

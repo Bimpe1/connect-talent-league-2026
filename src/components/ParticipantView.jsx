@@ -32,7 +32,7 @@ export default function ParticipantView({
   onSubmitChallenge,
   onNavigateLeaderboard 
 }) {
-  const [selectedWeek, setSelectedWeek] = useState(2);
+  const [selectedWeek, setSelectedWeek] = useState(1);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [submissionText, setSubmissionText] = useState('');
   const [inputMode, setInputMode] = useState('text'); // 'text', 'voice', 'media'
@@ -47,7 +47,7 @@ export default function ParticipantView({
   const [lastSubmittedTitle, setLastSubmittedTitle] = useState('');
 
   const activeWeeks = weeks || DEFAULT_WEEKS;
-  const currentWeekData = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[1];
+  const currentWeekData = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[0];
   const activeChallenge = currentWeekData.challenges[selectedDayIndex] || currentWeekData.challenges[0];
 
   // Current participant's submissions

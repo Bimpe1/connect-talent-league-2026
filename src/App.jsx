@@ -290,18 +290,16 @@ export default function App() {
     }));
   };
 
-  // Captain Adjusts Score
-  const handleAdjustScore = (id) => {
+  // Captain Adjusts Score (Safe in-app score update without browser prompt)
+  const handleAdjustScore = (id, newScore) => {
     if (currentUser?.role !== 'captain') return;
 
-    const currentScore = submissions.find(s => s.id === id)?.aiScore?.total || 15;
-    const input = prompt(`Adjust Talent Points (0 - 20):`, currentScore);
-    if (input !== null && !isNaN(input)) {
-      const newScore = Math.min(20, Math.max(0, parseInt(input, 10)));
-      setSubmissions(prev => prev.map(s => 
-        s.id === id ? { ...s, aiScore: { ...s.aiScore, total: newScore } } : s
-      ));
-    }
+    const val = typeof newScore === 'number' ? newScore : parseInt(newScore, 10);
+    const safeScore = Math.min(20, Math.max(0, isNaN(val) ? 15 : val));
+
+    setSubmissions(prev => prev.map(s => 
+      s.id === id ? { ...s, aiScore: { ...s.aiScore, total: safeScore } } : s
+    ));
   };
 
   // Captain Toggles Attendance
