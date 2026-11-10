@@ -11,17 +11,28 @@ import {
   PenTool,
   Info,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  Flame,
+  Award,
+  Trophy,
+  X,
+  Heart,
+  ThumbsUp,
+  HelpCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { WEEKS as DEFAULT_WEEKS } from '../data/curriculum';
 import VoiceRecorder from './VoiceRecorder';
 import MediaUploader from './MediaUploader';
+import ChallengeMiniLab from './ChallengeMiniLab';
+import ConfettiEffect from './ConfettiEffect';
 
 export default function ParticipantView({ 
   currentUser, 
   submissions, 
   weeks,
-  onSubmitChallenge 
+  onSubmitChallenge,
+  onNavigateLeaderboard 
 }) {
   const [selectedWeek, setSelectedWeek] = useState(2);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -32,6 +43,29 @@ export default function ParticipantView({
   const [buddyTested, setBuddyTested] = useState(false);
   const [buddyNotes, setBuddyNotes] = useState('');
 
+  // Gamification & Celebration States
+  const [confettiActive, setConfettiActive] = useState(false);
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
+  const [lastSubmittedTitle, setLastSubmittedTitle] = useState('');
+
+  // Safe 1-Click Peer Cheers State (persisted locally)
+  const [teamCheers, setTeamCheers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ct_cheers_2026');
+      return saved ? JSON.parse(saved) : { clap: 14, brain: 9, rocket: 18, fire: 12 };
+    } catch (e) {
+      return { clap: 14, brain: 9, rocket: 18, fire: 12 };
+    }
+  });
+
+  const handleCheer = (type) => {
+    setTeamCheers(prev => {
+      const updated = { ...prev, [type]: prev[type] + 1 };
+      try { localStorage.setItem('ct_cheers_2026', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+  };
+
   const activeWeeks = weeks || DEFAULT_WEEKS;
   const currentWeekData = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[1];
   const activeChallenge = currentWeekData.challenges[selectedDayIndex] || currentWeekData.challenges[0];
@@ -41,6 +75,11 @@ export default function ParticipantView({
   const existingSubmission = mySubmissions.find(
     s => s.weekNumber === selectedWeek && s.challengeTitle === activeChallenge.title
   );
+
+  // Calculate current streak (number of challenges completed in this week)
+  const completedInCurrentWeek = currentWeekData.challenges.filter(c =>
+    mySubmissions.some(s => s.weekNumber === selectedWeek && s.challengeTitle === c.title)
+  ).length;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -74,101 +113,174 @@ export default function ParticipantView({
       isReflection: !!activeChallenge.isReflection
     });
 
+    setLastSubmittedTitle(activeChallenge.title);
     setSubmissionText('');
     setBuddyNotes('');
     setBuddyTested(false);
     setAttachedVoice(null);
     setAttachedMedia(null);
+
+    // Trigger celebration effects
+    setConfettiActive(true);
+    setShowCelebrationModal(true);
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-7 py-3">
+    <div className="max-w-3xl mx-auto space-y-6 py-2">
       
-      {/* Title Header with larger readable font */}
-      <div className="text-center space-y-2 pb-1">
-        <span className="text-xs sm:text-sm font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3.5 py-1 rounded-full inline-block">
-          Connect Talent League 2026
-        </span>
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 font-heading tracking-tight">
-          {activeChallenge.title}
-        </h2>
-        <p className="text-sm sm:text-base text-slate-600 font-medium">
-          Week {selectedWeek} · {activeChallenge.day} · Max {activeChallenge.maxPoints} Talent Points
-        </p>
-      </div>
+      {/* Confetti Particle Layer */}
+      <ConfettiEffect active={confettiActive} onComplete={() => setConfettiActive(false)} />
 
-      {/* Week & Day Selector */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-        <div className="flex justify-center gap-2 border-b border-slate-100 pb-2.5">
-          {activeWeeks.map((w) => (
-            <button
-              key={w.weekNumber}
-              onClick={() => {
-                setSelectedWeek(w.weekNumber);
-                setSelectedDayIndex(0);
-              }}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-all border ${
-                selectedWeek === w.weekNumber
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
-              }`}
-            >
-              Week {w.weekNumber}
-            </button>
-          ))}
+      {/* ============================================================== */}
+      {/* 1. WEEKLY RHYTHM & STREAK BANNER                                */}
+      {/* ============================================================== */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-4 sm:p-5 text-white shadow-lg space-y-3.5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-xl bg-blue-500/30 flex items-center justify-center font-bold text-amber-300">
+              <Trophy size={18} />
+            </span>
+            <div>
+              <span className="text-xs font-bold text-blue-200 uppercase tracking-wider block">
+                {currentUser.teamName || 'Your'} Team Arena
+              </span>
+              <h3 className="text-base sm:text-lg font-bold font-heading">
+                Week {selectedWeek}: {currentWeekData.title}
+              </h3>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            {/* Streak Counter */}
+            <div className="flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold">
+              <Flame size={16} className="text-amber-400 fill-amber-400 animate-pulse" />
+              <span>{completedInCurrentWeek} Completed</span>
+            </div>
+          </div>
         </div>
 
-        {/* Days Ribbon */}
-        <div className="flex justify-center flex-wrap gap-2 pt-0.5">
-          {currentWeekData.challenges.map((c, idx) => (
-            <button
-              key={idx}
-              onClick={() => setSelectedDayIndex(idx)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border ${
-                selectedDayIndex === idx
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-              }`}
-            >
-              {c.day}
-            </button>
-          ))}
+        {/* Days of the Week Progress Dots */}
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center text-xs">
+          {currentWeekData.challenges.map((c, idx) => {
+            const isDone = mySubmissions.some(
+              s => s.weekNumber === selectedWeek && s.challengeTitle === c.title
+            );
+            const isCurrent = selectedDayIndex === idx;
+
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setSelectedDayIndex(idx)}
+                className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-between border ${
+                  isCurrent
+                    ? 'bg-blue-600 text-white border-blue-400 shadow-md ring-2 ring-white/50'
+                    : isDone
+                    ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'
+                    : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <span className="text-[10px] uppercase font-bold tracking-tight">
+                  {c.day.slice(0, 3)}
+                </span>
+                <span className="mt-1">
+                  {isDone ? (
+                    <CheckCircle2 size={14} className="text-emerald-400" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-white/30 block" />
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Challenge Card */}
-      <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-sm border border-slate-200 space-y-5 sm:space-y-6">
+      {/* Week Selector Pills */}
+      <div className="flex justify-center gap-2">
+        {activeWeeks.map((w) => (
+          <button
+            key={w.weekNumber}
+            onClick={() => {
+              setSelectedWeek(w.weekNumber);
+              setSelectedDayIndex(0);
+            }}
+            className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all border ${
+              selectedWeek === w.weekNumber
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Week {w.weekNumber}
+          </button>
+        ))}
+      </div>
+
+      {/* ============================================================== */}
+      {/* 2. CHALLENGE CARD                                              */}
+      {/* ============================================================== */}
+      <div className="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border border-slate-200 space-y-6">
         
+        {/* Challenge Header */}
+        <div className="space-y-1.5 border-b border-slate-100 pb-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full">
+              {activeChallenge.day} Challenge · Max {activeChallenge.maxPoints} TP
+            </span>
+            {existingSubmission && (
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <Check size={12} />
+                <span>Submitted</span>
+              </span>
+            )}
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-heading tracking-tight">
+            {activeChallenge.title}
+          </h2>
+        </div>
+
         {/* Challenge Instructions Box */}
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           <div className="border border-slate-200 bg-slate-50/70 rounded-2xl p-5 text-slate-800 text-base sm:text-lg leading-relaxed font-medium">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
-              Challenge:
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">
+              Instructions:
             </span>
             {activeChallenge.instructions}
           </div>
 
           {activeChallenge.thinkingPrompt && (
-            <div className="border border-blue-200 bg-blue-50/60 rounded-2xl p-5 text-sm sm:text-base text-blue-950 leading-relaxed">
+            <div className="border border-blue-200 bg-blue-50/60 rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-blue-950 leading-relaxed">
               <span className="font-bold text-blue-800 block mb-1 uppercase tracking-wide text-xs">
-                Explain your thinking (Earns full points):
+                Coach's Critical-Thinking Prompt:
               </span>
               <p className="italic font-medium">{activeChallenge.thinkingPrompt}</p>
             </div>
           )}
         </div>
 
-        {/* Existing Submission or Form */}
+        {/* ============================================================== */}
+        {/* 3. INTERACTIVE CHALLENGE MINI-LAB                              */}
+        {/* ============================================================== */}
+        {!existingSubmission && (
+          <ChallengeMiniLab
+            challengeTitle={activeChallenge.title}
+            onInsertIntoAnswer={(text) => {
+              setSubmissionText(prev => prev ? `${prev}\n\n${text}` : text);
+            }}
+          />
+        )}
+
+        {/* Existing Submission or Response Form */}
         {existingSubmission ? (
           <div className="bg-emerald-50/60 rounded-2xl p-6 border border-emerald-300 space-y-3">
             <div className="flex justify-between items-center border-b border-emerald-200 pb-3">
               <span className="text-sm font-bold text-emerald-900 flex items-center gap-2">
                 <CheckCircle2 size={18} className="text-emerald-600" />
-                Evidence Submitted
+                Evidence Submitted to Captain
               </span>
-              <span className="text-sm font-bold text-emerald-800 bg-emerald-200/80 px-3 py-1 rounded-full">
+              <span className="text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-200/80 px-3 py-1 rounded-full">
                 {existingSubmission.status === 'approved' 
-                  ? `Approved (${existingSubmission.aiScore?.total || 20} TP)` 
+                  ? `Approved (+${existingSubmission.aiScore?.total || 20} TP)` 
                   : 'Pending Review'}
               </span>
             </div>
@@ -183,7 +295,7 @@ export default function ParticipantView({
             {/* Input Mode Selector Bar */}
             <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-200 pb-3.5">
               <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700">
-                Choose how to answer:
+                Choose how to submit evidence:
               </span>
               
               <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
@@ -253,13 +365,13 @@ export default function ParticipantView({
             {/* Primary Textarea */}
             <div className="space-y-2">
               <label className="block text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700">
-                Your Answer & Explanation
+                Your Answer & Reasoning
               </label>
               <textarea
                 rows={4}
                 value={submissionText}
                 onChange={(e) => setSubmissionText(e.target.value)}
-                placeholder="Type your response here... (What helped you decide? What might you check or change?)"
+                placeholder="Share your thoughts here... Explain what helped you decide and what you learned."
                 className="w-full border-2 border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl p-4 text-base text-slate-800 placeholder:text-slate-400 focus:outline-none transition leading-relaxed bg-white shadow-inner font-normal"
               />
             </div>
@@ -273,14 +385,14 @@ export default function ParticipantView({
                   onChange={(e) => setBuddyTested(e.target.checked)}
                   className="rounded border-slate-400 text-blue-600 focus:ring-blue-500 w-5 h-5 cursor-pointer"
                 />
-                <span>I tested or checked this idea with a buddy or teammate (+5 TP Evidence)</span>
+                <span>I tested or discussed this idea with a buddy or teammate</span>
               </label>
 
               {buddyTested && (
                 <div className="pl-8 pt-1">
                   <input
                     type="text"
-                    placeholder="Who did you test with and what did they say?"
+                    placeholder="Who did you talk with and what was their feedback?"
                     value={buddyNotes}
                     onChange={(e) => setBuddyNotes(e.target.value)}
                     className="w-full border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:border-blue-500 focus:outline-none bg-white font-medium"
@@ -289,26 +401,110 @@ export default function ParticipantView({
               )}
             </div>
 
-            {/* Submit Action */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
-              <span className="text-xs sm:text-sm text-slate-500 font-medium">
-                Effort counts · Your ideas matter
+            {/* ============================================================== */}
+            {/* 4. COACH'S QUALITY TIPS (Honest Scaffolding - No Rigged Meter) */}
+            {/* ============================================================== */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 text-xs sm:text-sm text-slate-700">
+              <span className="font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider text-xs">
+                <ShieldCheck size={16} className="text-blue-600" />
+                Coach's Rubric Quality Tips:
               </span>
+              <p className="text-slate-500 text-xs">
+                Captains evaluate submissions individually based on effort, reasoning, and peer collaboration. For full marks, remember to:
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold pt-1">
+                <li className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                  <Check size={14} className="text-blue-600 flex-shrink-0" />
+                  <span>Clear attempt &amp; effort</span>
+                </li>
+                <li className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                  <Check size={14} className="text-blue-600 flex-shrink-0" />
+                  <span>Explain reasoning ("because...")</span>
+                </li>
+                <li className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                  <Check size={14} className="text-blue-600 flex-shrink-0" />
+                  <span>Discuss or test with a buddy</span>
+                </li>
+                <li className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                  <Check size={14} className="text-blue-600 flex-shrink-0" />
+                  <span>Note next step or improvement</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Submit Action */}
+            <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm sm:text-base font-bold shadow-md shadow-blue-500/20 transition active:scale-95"
+                className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-base font-bold shadow-md shadow-blue-500/25 transition active:scale-95 flex items-center justify-center gap-2"
               >
-                Submit Evidence to Captain
+                <Send size={18} />
+                <span>Submit Evidence to Captain</span>
               </button>
             </div>
           </form>
         )}
       </div>
 
-      {/* Recent Submissions List */}
+      {/* ============================================================== */}
+      {/* 5. TEAM CHEER WALL (1-Click Safe Peer Encouragement)           */}
+      {/* ============================================================== */}
+      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🙌</span>
+            <h4 className="font-bold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+              {currentUser.teamName || 'Team'} Cheer Wall
+            </h4>
+          </div>
+          <span className="text-xs text-slate-400 font-medium">Tap to cheer on your team</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <button
+            type="button"
+            onClick={() => handleCheer('clap')}
+            className="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-2xl flex items-center justify-between transition active:scale-95 text-xs font-bold text-slate-800"
+          >
+            <span>👏 Great Effort!</span>
+            <span className="bg-white px-2 py-0.5 rounded-full border border-slate-200 text-blue-700">{teamCheers.clap}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleCheer('brain')}
+            className="p-3 bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-2xl flex items-center justify-between transition active:scale-95 text-xs font-bold text-slate-800"
+          >
+            <span>💡 Clever Idea!</span>
+            <span className="bg-white px-2 py-0.5 rounded-full border border-slate-200 text-purple-700">{teamCheers.brain}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleCheer('rocket')}
+            className="p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-2xl flex items-center justify-between transition active:scale-95 text-xs font-bold text-slate-800"
+          >
+            <span>🚀 Team Spirit!</span>
+            <span className="bg-white px-2 py-0.5 rounded-full border border-slate-200 text-amber-700">{teamCheers.rocket}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleCheer('fire')}
+            className="p-3 bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-2xl flex items-center justify-between transition active:scale-95 text-xs font-bold text-slate-800"
+          >
+            <span>🔥 On Fire!</span>
+            <span className="bg-white px-2 py-0.5 rounded-full border border-slate-200 text-rose-700">{teamCheers.fire}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ============================================================== */}
+      {/* 6. RECENT SUBMISSIONS HISTORY                                  */}
+      {/* ============================================================== */}
       {mySubmissions.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-3.5">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-2.5">
             <h4 className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">
               Your Submission History
             </h4>
@@ -321,30 +517,78 @@ export default function ParticipantView({
             {mySubmissions.map((sub) => (
               <div 
                 key={sub.id} 
-                className="py-3.5 flex justify-between items-center gap-4 text-sm first:pt-0 last:pb-0"
+                className="py-3 flex justify-between items-center gap-3 text-sm first:pt-0 last:pb-0"
               >
                 <div className="space-y-0.5 truncate">
-                  <div className="font-bold text-slate-900 text-sm sm:text-base truncate">
+                  <div className="font-bold text-slate-900 text-sm truncate">
                     Week {sub.weekNumber} · {sub.challengeTitle}
                   </div>
-                  <div className="text-slate-500 text-xs sm:text-sm truncate">
+                  <div className="text-slate-500 text-xs truncate">
                     {sub.submissionText}
                   </div>
                 </div>
 
                 <div className="flex-shrink-0">
                   {sub.status === 'approved' ? (
-                    <span className="text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full text-xs sm:text-sm">
+                    <span className="text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full text-xs">
                       +{sub.aiScore?.total || 20} TP
                     </span>
                   ) : (
-                    <span className="text-amber-800 font-semibold bg-amber-50 border border-amber-200 px-3 py-1 rounded-full text-xs sm:text-sm">
+                    <span className="text-amber-800 font-semibold bg-amber-50 border border-amber-200 px-3 py-1 rounded-full text-xs">
                       Pending Review
                     </span>
                   )}
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* 7. CELEBRATION FANFARE MODAL (On Submission)                   */}
+      {/* ============================================================== */}
+      {showCelebrationModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl border border-slate-100">
+            <div className="w-16 h-16 bg-gradient-to-tr from-amber-400 to-yellow-300 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-amber-500/25">
+              <Trophy size={32} className="animate-bounce" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full inline-block">
+                Team {currentUser.teamName || 'League'}
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading">
+                Evidence Submitted!
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pt-1">
+                Great job completing <span className="font-bold text-slate-800">"{lastSubmittedTitle}"</span>. Your response has been placed in the Captain queue for review!
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs text-slate-700 flex items-center justify-around font-bold">
+              <div className="text-center">
+                <span className="block text-slate-400 font-normal text-[10px] uppercase">Streak</span>
+                <span className="text-amber-600 text-sm flex items-center justify-center gap-0.5">
+                  <Flame size={14} className="fill-amber-500" />
+                  {completedInCurrentWeek} Days
+                </span>
+              </div>
+              <div className="h-6 w-px bg-slate-200" />
+              <div className="text-center">
+                <span className="block text-slate-400 font-normal text-[10px] uppercase">Max Points</span>
+                <span className="text-blue-600 text-sm">Up to 20 TP</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowCelebrationModal(false)}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-md shadow-blue-500/25 transition active:scale-95"
+            >
+              Keep Going!
+            </button>
           </div>
         </div>
       )}
