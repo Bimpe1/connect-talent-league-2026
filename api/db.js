@@ -133,6 +133,12 @@ export async function ensureTables(sql) {
       await sql`ALTER TABLE participants ADD COLUMN IF NOT EXISTS email VARCHAR(255);`;
     } catch (e) {}
 
+    // Ensure is_approved and status columns exist on participants
+    try {
+      await sql`ALTER TABLE participants ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;`;
+      await sql`ALTER TABLE participants ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'approved';`;
+    } catch (e) {}
+
     tablesInitialized = true;
   } catch (err) {
     console.error("Failed to ensure database tables:", err);

@@ -12,6 +12,7 @@ import { Key, AlertTriangle, X, ShieldAlert, Cloud } from 'lucide-react';
 import {
   fetchParticipants,
   saveParticipant,
+  deleteParticipant,
   fetchSubmissions,
   saveSubmission,
   fetchCaptains,
@@ -35,7 +36,13 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('ct_current_user_2026');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.role !== 'captain' && parsed.isApproved === false) {
+        localStorage.removeItem('ct_current_user_2026');
+        return null;
+      }
+      return parsed;
     } catch (e) {
       return null;
     }
@@ -162,7 +169,9 @@ export default function App() {
                 map.set(cp.id, {
                   ...local,
                   ...cp,
-                  email: (cp.email && cp.email.trim()) ? cp.email.trim().toLowerCase() : (local?.email || '')
+                  email: (cp.email && cp.email.trim()) ? cp.email.trim().toLowerCase() : (local?.email || ''),
+                  isApproved: cp.isApproved !== undefined ? cp.isApproved : (local?.isApproved !== undefined ? local.isApproved : true),
+                  status: cp.status || local?.status || (cp.isApproved ? 'approved' : 'pending')
                 });
               });
               const merged = Array.from(map.values());
@@ -234,7 +243,10 @@ export default function App() {
       wk4: 0,
       attendance: { prep: true, wk1: false, wk2: false, wk3: false, wk4: false },
       // Induction earns Ready to Begin badge automatically per pack page 2 & 7
-      badges: ["ready_to_begin"]
+      badges: ["ready_to_begin"],
+      isApproved: false,
+      status: 'pending',
+      registeredAt: new Date().toISOString()
     };
 
     setParticipants(prev => {
@@ -246,8 +258,46 @@ export default function App() {
       return updated;
     });
     saveParticipant(newParticipant);
-    setCurrentUser(newParticipant);
-    setCurrentTab('challenges');
+
+    // Registration requires Captain Approval before sign-in:
+    // Return the new participant object so EnrollmentView can show the pending approval confirmation
+    return newParticipant;
+  };
+
+  // Approve Participant Registration (Captain)
+  const handleApproveParticipant = (participantId) => {
+    setParticipants(prev => {
+      const updated = prev.map(p => {
+        if (p.id === participantId) {
+          return {
+            ...p,
+            isApproved: true,
+            status: 'approved',
+            approvedAt: new Date().toISOString(),
+            approvedBy: currentUser?.name || 'Captain'
+          };
+        }
+        return p;
+      });
+      try {
+        localStorage.setItem('ct_participants_2026', JSON.stringify(updated));
+      } catch (e) {}
+      const target = updated.find(p => p.id === participantId);
+      if (target) saveParticipant(target);
+      return updated;
+    });
+  };
+
+  // Reject / Remove Participant Registration (Captain)
+  const handleRejectParticipant = (participantId) => {
+    setParticipants(prev => {
+      const updated = prev.filter(p => p.id !== participantId);
+      try {
+        localStorage.setItem('ct_participants_2026', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    deleteParticipant(participantId);
   };
 
   // Update participant email directly
@@ -264,10 +314,14 @@ export default function App() {
     });
   };
 
-  // Switch to previously enrolled user
+  // Switch to previously enrolled user (enforces captain approval)
   const handleSelectExistingUser = (participant) => {
+    if (participant.isApproved === false || participant.status === 'pending') {
+      return { success: false, reason: 'pending_approval', participant };
+    }
     setCurrentUser(participant);
     setCurrentTab('challenges');
+    return { success: true };
   };
 
   // Sign out
@@ -626,10 +680,10 @@ const handleAdjustScore = (id, newScore) => {
               />
             )}
 
-            {/* Leaderboard View (Clean rankings of all registered participants) */}
+            {/* Leaderboard View (Clean rankings of all approved participants) */}
             {currentTab === 'leaderboard' && (
               <LeaderboardView
-                participants={participants}
+                participants={participants.filter(p => p.isApproved !== false && p.status !== 'pending')}
               />
             )}
 
@@ -652,6 +706,8 @@ const handleAdjustScore = (id, newScore) => {
                 timing={timing}
                 onUpdateSchedule={handleUpdateSchedule}
                 onUpdateParticipantEmail={handleUpdateParticipantEmail}
+                onApproveParticipant={handleApproveParticipant}
+                onRejectParticipant={handleRejectParticipant}
                 onUpdateChallenge={handleUpdateChallenge}
                 onResetChallenges={handleResetChallenges}
                 onApproveSubmission={handleApproveSubmission}

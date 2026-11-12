@@ -20,7 +20,9 @@ export async function fetchParticipants(fallback = []) {
         mergedMap.set(p.id, {
           ...local,
           ...p,
-          email: (p.email && p.email.trim()) ? p.email.trim().toLowerCase() : (local?.email || '')
+          email: (p.email && p.email.trim()) ? p.email.trim().toLowerCase() : (local?.email || ''),
+          isApproved: p.isApproved !== undefined ? p.isApproved : (local?.isApproved !== undefined ? local.isApproved : true),
+          status: p.status || local?.status || (p.isApproved ? 'approved' : 'pending')
         });
       });
       const merged = Array.from(mergedMap.values());
@@ -60,6 +62,29 @@ export async function saveParticipant(participant) {
     return await res.json();
   } catch (err) {
     console.warn('Could not save participant to cloud DB, kept in localStorage:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Delete / Reject participant from DB
+ */
+export async function deleteParticipant(participantId) {
+  try {
+    const saved = localStorage.getItem('ct_participants_2026');
+    const list = saved ? JSON.parse(saved) : [];
+    const updated = list.filter(p => p.id !== participantId);
+    localStorage.setItem('ct_participants_2026', JSON.stringify(updated));
+  } catch (e) {}
+
+  try {
+    const res = await fetch(`${API_BASE}/participants?id=${encodeURIComponent(participantId)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('Could not delete participant from cloud DB:', err.message);
     return null;
   }
 }

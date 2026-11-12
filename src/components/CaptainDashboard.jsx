@@ -22,7 +22,11 @@ import {
   Bell,
   Send,
   Eye,
-  CheckCheck
+  CheckCheck,
+  UserCheck,
+  UserX,
+  Users,
+  ShieldCheck
 } from 'lucide-react';
 
 import {
@@ -42,6 +46,8 @@ export default function CaptainDashboard({
   timing,
   onUpdateSchedule,
   onUpdateParticipantEmail,
+  onApproveParticipant,
+  onRejectParticipant,
   onUpdateChallenge,
   onResetChallenges,
   onApproveSubmission,
@@ -54,6 +60,11 @@ export default function CaptainDashboard({
   const [section, setSection] = useState('queue');
   const [teamFilter, setTeamFilter] = useState('all');
   const [scoreDrafts, setScoreDrafts] = useState({});
+  const [confirmRejectId, setConfirmRejectId] = useState(null);
+
+  // Participant Approval Lists
+  const pendingRegistrations = participants.filter(p => p.isApproved === false || p.status === 'pending');
+  const approvedParticipants = participants.filter(p => p.isApproved !== false && p.status !== 'pending');
 
   // Timing & Email Notification States
   const [openTimeInput, setOpenTimeInput] = useState(schedule?.openTime || '09:00');
@@ -262,6 +273,24 @@ export default function CaptainDashboard({
         </button>
 
         <button
+          onClick={() => setSection('approvals')}
+          className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border ${
+            section === 'approvals'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+          }`}
+        >
+          <UserCheck size={14} />
+          <span className="truncate">Approvals</span>
+
+          {pendingRegistrations.length > 0 && (
+            <span className="bg-amber-400 text-amber-950 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-black animate-pulse">
+              {pendingRegistrations.length}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setSection('timing')}
           className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border ${
             section === 'timing'
@@ -311,7 +340,202 @@ export default function CaptainDashboard({
       </div>
 
       {/* ============================================================== */}
-      {/* SECTION: TIMING & EMAIL NOTIFICATIONS                          */}
+      {/* SECTION: PARTICIPANT REGISTRATION APPROVALS                    */}
+      {/* ============================================================== */}
+      {section === 'approvals' && (
+        <div className="space-y-6">
+          {/* Header Card */}
+          <div className="bg-white rounded-2xl p-5 sm:p-7 shadow-sm border border-slate-200">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 font-heading">
+                    Player Registration Approvals
+                  </h3>
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                    pendingRegistrations.length > 0
+                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  }`}>
+                    {pendingRegistrations.length > 0 ? `${pendingRegistrations.length} Awaiting Approval` : 'All Approved'}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+                  For transparency and verification, newly enrolled players must be approved by a Team Captain before they can log in and submit challenges.
+                </p>
+              </div>
+
+              {pendingRegistrations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    pendingRegistrations.forEach(p => onApproveParticipant?.(p.id));
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95 flex items-center gap-1.5 flex-shrink-0"
+                >
+                  <CheckCheck size={14} />
+                  <span>Approve All ({pendingRegistrations.length})</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Pending Registrations List */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 px-1">
+              Pending Verification ({pendingRegistrations.length})
+            </h4>
+
+            {pendingRegistrations.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
+                  <ShieldCheck size={24} />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  No Pending Registrations
+                </h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  All players who registered have been approved and can log in normally. New player enrollments will appear here for review.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {pendingRegistrations.map(p => (
+                  <div
+                    key={p.id}
+                    className="bg-white rounded-2xl p-4 sm:p-5 border-2 border-amber-200/80 shadow-xs space-y-3 flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <span className="font-extrabold text-base text-slate-900 block font-heading">
+                            {p.name}
+                          </span>
+                          <span className="text-xs text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md inline-block mt-0.5 border border-purple-200">
+                            Team {p.teamName || 'Unassigned'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 flex items-center gap-1">
+                          <Clock size={11} /> Pending
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-slate-500 space-y-1 pt-1">
+                        <div>
+                          <span className="font-semibold text-slate-600">Role: </span>
+                          <span className="capitalize">{p.role || 'Learner'}</span>
+                        </div>
+                        {p.email && (
+                          <div className="truncate">
+                            <span className="font-semibold text-slate-600">Email: </span>
+                            <span className="font-mono text-slate-700">{p.email}</span>
+                          </div>
+                        )}
+                        {p.registeredAt && (
+                          <div className="text-[11px] text-slate-400">
+                            Registered: {new Date(p.registeredAt).toLocaleDateString()} {new Date(p.registeredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2 border-t border-slate-100">
+                      {confirmRejectId === p.id ? (
+                        <div className="flex items-center gap-1.5 w-full">
+                          <span className="text-xs font-bold text-rose-800">Reject?</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onRejectParticipant?.(p.id);
+                              setConfirmRejectId(null);
+                            }}
+                            className="flex-1 py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold"
+                          >
+                            Yes, Reject
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRejectId(null)}
+                            className="py-1.5 px-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onApproveParticipant?.(p.id)}
+                            className="flex-1 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
+                          >
+                            <Check size={14} />
+                            <span>Approve & Enable Login</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRejectId(p.id)}
+                            className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold border border-rose-200 transition active:scale-95 flex items-center justify-center gap-1"
+                            title="Decline registration"
+                          >
+                            <UserX size={14} />
+                            <span className="hidden sm:inline">Decline</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Approved Players Directory */}
+          <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                  Approved Active Players ({approvedParticipants.length})
+                </h4>
+                <p className="text-xs text-slate-500 font-medium">
+                  Verified players currently active and permitted to sign in to the app.
+                </p>
+              </div>
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                {approvedParticipants.length} Active Players
+              </span>
+            </div>
+
+            {approvedParticipants.length === 0 ? (
+              <p className="text-xs text-slate-500 italic p-3 text-center">
+                No approved players yet. Approve players above to activate them.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pt-1">
+                {approvedParticipants.map(p => (
+                  <div
+                    key={p.id}
+                    className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 text-xs flex justify-between items-center"
+                  >
+                    <div>
+                      <span className="font-bold text-slate-900 block">{p.name}</span>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        Team {p.teamName} · {p.role || 'Learner'} {p.email ? `· ${p.email}` : ''}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check size={10} /> Approved
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* SECTION: TIMING & SCHEDULE                                     */}
       {/* ============================================================== */}
       {section === 'timing' && (
         <div className="space-y-6">

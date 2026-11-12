@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail } from 'lucide-react';
+import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail, Clock, UserCheck, ShieldCheck } from 'lucide-react';
 import { TEAMS } from '../data/curriculum';
 
 export default function EnrollmentView({ 
@@ -16,6 +16,7 @@ export default function EnrollmentView({
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [enrollError, setEnrollError] = useState('');
+  const [submittedForApproval, setSubmittedForApproval] = useState(null);
 
   // Check if entire League is full
   const allTeamsFull = TEAMS.every(
@@ -77,13 +78,17 @@ export default function EnrollmentView({
       return;
     }
 
-    onEnroll({
+    const newPlayer = onEnroll({
       name: cleanName,
       email: cleanEmail || '',
       role,
       teamId: team.id,
       teamName: team.name,
     });
+
+    if (newPlayer) {
+      setSubmittedForApproval(newPlayer);
+    }
   };
 
   // Handle Returning Participant Sign In
@@ -105,6 +110,13 @@ export default function EnrollmentView({
     if (!found) {
       setSignInError(
         `No enrolled participant found matching "${cleanName}". Please verify the spelling or click "Enroll as New" to register.`
+      );
+      return;
+    }
+
+    if (found.isApproved === false || found.status === 'pending') {
+      setSignInError(
+        `⏳ Hi ${found.name}, your registration for Team ${found.teamName || 'League'} is currently pending Captain approval. Once Coach Morgan or your Team Captain approves it, you can log in immediately!`
       );
       return;
     }
@@ -131,37 +143,114 @@ export default function EnrollmentView({
         </h1>
       </div>
 
-      {/* Mode Switcher Tabs: Enroll vs Sign In */}
-      <div className="flex bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 gap-1.5">
-        <button
-          type="button"
-          onClick={() => { setTab('enroll'); setEnrollError(''); setSignInError(''); }}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition border ${
-            tab === 'enroll'
-              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm border-transparent'
-              : 'text-slate-600 border-transparent hover:text-[#0a2558]'
-          }`}
-        >
-          <UserPlus size={16} />
-          <span>Enroll as New</span>
-        </button>
+      {submittedForApproval ? (
+        /* ============================================================== */
+        /* PENDING APPROVAL CONFIRMATION CARD                             */
+        /* ============================================================== */
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-purple-200 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 rounded-3xl bg-amber-50 border-2 border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-sm">
+            <Clock size={32} />
+          </div>
 
-        <button
-          type="button"
-          onClick={() => { setTab('signin'); setEnrollError(''); setSignInError(''); }}
-          className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition border ${
-            tab === 'signin'
-              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm border-transparent'
-              : 'text-slate-600 border-transparent hover:text-[#0a2558]'
-          }`}
-        >
-          <LogIn size={16} />
-          <span>Returning Sign-In</span>
-        </button>
-      </div>
+          <div className="space-y-2">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-3.5 py-1 rounded-full inline-block">
+              Registration Submitted for Review
+            </span>
+            <h2 className="text-2xl font-black text-slate-900 font-heading">
+              Welcome, {submittedForApproval.name}!
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+              Your registration for <strong>Team {submittedForApproval.teamName}</strong> has been received. For transparency and participant safety, your Team Captain must approve your registration before you can log in and submit daily challenges.
+            </p>
+          </div>
 
-      {/* Main Card */}
-      <div className="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border border-slate-200 space-y-6">
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 max-w-sm mx-auto text-left space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-slate-500 font-medium">Player Name:</span>
+              <span className="font-bold text-slate-800">{submittedForApproval.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 font-medium">Team Assigned:</span>
+              <span className="font-bold text-purple-700">{submittedForApproval.teamName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 font-medium">Role:</span>
+              <span className="font-bold text-slate-800 capitalize">{submittedForApproval.role}</span>
+            </div>
+            {submittedForApproval.email && (
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Email:</span>
+                <span className="font-bold text-slate-800">{submittedForApproval.email}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-1 border-t border-slate-200">
+              <span className="text-slate-500 font-medium">Current Status:</span>
+              <span className="font-bold text-amber-700 flex items-center gap-1">
+                <Clock size={12} /> Pending Captain Approval
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setSubmittedForApproval(null);
+                setTab('signin');
+                setSignInName(submittedForApproval.name);
+              }}
+              className="px-6 py-3 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-950/20 transition active:scale-95"
+            >
+              Go to Sign-In Tab
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSubmittedForApproval(null);
+                setDisplayName('');
+                setEmail('');
+                setSelectedTeamId(null);
+                setTab('enroll');
+              }}
+              className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition"
+            >
+              Register Another Player
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Mode Switcher Tabs: Enroll vs Sign In */}
+          <div className="flex bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 gap-1.5">
+            <button
+              type="button"
+              onClick={() => { setTab('enroll'); setEnrollError(''); setSignInError(''); }}
+              className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition border ${
+                tab === 'enroll'
+                  ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm border-transparent'
+                  : 'text-slate-600 border-transparent hover:text-[#0a2558]'
+              }`}
+            >
+              <UserPlus size={16} />
+              <span>Enroll as New</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setTab('signin'); setEnrollError(''); setSignInError(''); }}
+              className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition border ${
+                tab === 'signin'
+                  ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm border-transparent'
+                  : 'text-slate-600 border-transparent hover:text-[#0a2558]'
+              }`}
+            >
+              <LogIn size={16} />
+              <span>Returning Sign-In</span>
+            </button>
+          </div>
+
+          {/* Main Card */}
+          <div className="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border border-slate-200 space-y-6">
         
         {/* ======================================================== */}
         {/* TAB 1: ENROLL AS NEW                                     */}
@@ -410,19 +499,36 @@ export default function EnrollmentView({
                   Or click your registered profile:
                 </span>
                 <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
-                  {existingParticipants.map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => onSelectExistingUser(p)}
-                      className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-[#0a2558] hover:text-[#6d28d9] rounded-xl text-xs font-bold border border-purple-200 transition flex items-center gap-1.5 shadow-2xs"
-                    >
-                      <span>{p.name}</span>
-                      <span className="text-[10px] text-purple-600 bg-white px-1.5 py-0.5 rounded-md font-semibold">
-                        {p.teamName}
-                      </span>
-                    </button>
-                  ))}
+                  {existingParticipants.map(p => {
+                    const isPending = p.isApproved === false || p.status === 'pending';
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          if (isPending) {
+                            setSignInError(
+                              `⏳ Hi ${p.name}, your registration for Team ${p.teamName || 'League'} is currently pending Captain approval. Once Coach Morgan or your Team Captain approves it, you can log in immediately!`
+                            );
+                          } else {
+                            onSelectExistingUser(p);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 shadow-2xs ${
+                          isPending
+                            ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                            : 'bg-purple-50 hover:bg-purple-100 text-[#0a2558] hover:text-[#6d28d9] border-purple-200'
+                        }`}
+                      >
+                        <span>{p.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${
+                          isPending ? 'bg-amber-200/80 text-amber-950' : 'bg-white text-purple-600'
+                        }`}>
+                          {isPending ? '⏳ Pending Approval' : p.teamName}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -438,6 +544,8 @@ export default function EnrollmentView({
           </form>
         )}
       </div>
+      </>
+      )}
 
       {/* Captain Sign-In Link */}
       <div className="text-center pt-2">

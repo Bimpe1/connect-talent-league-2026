@@ -36,6 +36,8 @@ export default async function handler(req, res) {
           wk4, 
           attendance, 
           badges, 
+          is_approved as "isApproved",
+          status,
           created_at as "createdAt"
         FROM participants
         ORDER BY created_at ASC;
@@ -75,10 +77,14 @@ export default async function handler(req, res) {
         });
       }
 
+      const isApprovedVal = p.isApproved !== undefined ? p.isApproved : false;
+      const statusVal = p.status || (isApprovedVal ? 'approved' : 'pending');
+
       await sql`
         INSERT INTO participants (
           id, name, email, role, team_id, team_name, 
-          wk1, wk2, wk3, wk4, attendance, badges
+          wk1, wk2, wk3, wk4, attendance, badges,
+          is_approved, status
         ) VALUES (
           ${p.id},
           ${p.name},
@@ -91,7 +97,9 @@ export default async function handler(req, res) {
           ${p.wk3 || 0},
           ${p.wk4 || 0},
           ${JSON.stringify(p.attendance || {})},
-          ${JSON.stringify(p.badges || [])}
+          ${JSON.stringify(p.badges || [])},
+          ${isApprovedVal},
+          ${statusVal}
         )
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
@@ -104,10 +112,21 @@ export default async function handler(req, res) {
           wk3 = EXCLUDED.wk3,
           wk4 = EXCLUDED.wk4,
           attendance = EXCLUDED.attendance,
-          badges = EXCLUDED.badges;
+          badges = EXCLUDED.badges,
+          is_approved = EXCLUDED.is_approved,
+          status = EXCLUDED.status;
       `;
 
       return res.status(200).json({ success: true, participant: p });
+    }
+
+    if (req.method === 'DELETE') {
+      const id = req.query?.id || req.body?.id;
+      if (!id) {
+        return res.status(400).json({ error: 'Missing participant id' });
+      }
+      await sql`DELETE FROM participants WHERE id = ${id};`;
+      return res.status(200).json({ success: true, deletedId: id });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
