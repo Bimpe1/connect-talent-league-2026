@@ -608,8 +608,24 @@ export default function CaptainDashboard({
       {section === 'attendance' && (
         <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200 space-y-4">
 
-          <div className="text-sm text-slate-600 font-medium border-b border-slate-100 pb-3">
-            Click boxes to toggle 1 (attended) or 0 (missed). Thursday sessions earn 10 TP attendance bonus.
+          <div className="text-sm text-slate-600 font-medium border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-2">
+            <span>Click boxes to toggle 1 (attended) or 0 (missed). Thursday sessions earn 10 TP attendance bonus.</span>
+            <button
+              type="button"
+              onClick={() => {
+                const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+                const rows = [['name', 'email', 'team', 'role'], ...participants.map(p => [p.name, p.email, p.teamName, p.role])];
+                const blob = new Blob([rows.map(r => r.map(esc).join(',')).join('\n')], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'league-participants.csv';
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}
+              className="text-xs font-bold text-[#0a2558] bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl"
+            >
+              Export emails (CSV)
+            </button>
           </div>
 
           <div className="divide-y divide-slate-200 text-sm">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import EnrollmentView from './components/EnrollmentView';
 import ParticipantView from './components/ParticipantView';
@@ -8,181 +8,118 @@ import CaptainDashboard from './components/CaptainDashboard';
 import WhatsAppTemplatesModal from './components/WhatsAppTemplatesModal';
 import SecurityModal from './components/SecurityModal';
 import { WEEKS as DEFAULT_WEEKS } from './data/curriculum';
-import { Key, AlertTriangle, X, ShieldAlert } from 'lucide-react';
-
-const CAPTAIN_ACCOUNT = { 
-  id: 'c_morgan', 
-  name: 'Coach Morgan', 
-  role: 'captain', 
-  teamName: 'Staff' 
-};
+import { supabase, isSupabaseConfigured } from './lib/supabase';
+import * as api from './lib/api';
 
 export default function App() {
-  // Current active logged in user (null if not enrolled/signed in)
-  const [currentUser, setCurrentUser] = useState(null);
-
+  const [booting, setBooting] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null); // profile of the signed-in user
   const [currentTab, setCurrentTab] = useState('challenges'); // 'challenges', 'leaderboard', 'badges', 'captain'
-
-  // Enrolled Participants (starts clean, persists in localStorage)
-  const [participants, setParticipants] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ct_participants_2026');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  // Challenge Submissions (starts clean, persists in localStorage)
-  const [submissions, setSubmissions] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ct_submissions_2026');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  // Dynamic Curriculum State (Persisted in localStorage)
-  const [weeks, setWeeks] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ct_league_weeks_2026');
-      return saved ? JSON.parse(saved) : DEFAULT_WEEKS;
-    } catch (e) {
-      return DEFAULT_WEEKS;
-    }
-  });
-
-  // Registered Captains (Persisted in localStorage)
-  const [captains, setCaptains] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ct_captains_2026');
-      return saved ? JSON.parse(saved) : [{ id: 'c_morgan', name: 'Coach Morgan', role: 'captain', teamName: 'Staff' }];
-    } catch (e) {
-      return [{ id: 'c_morgan', name: 'Coach Morgan', role: 'captain', teamName: 'Staff' }];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ct_captains_2026', JSON.stringify(captains));
-    } catch (e) {}
-  }, [captains]);
-
-  // Persist state changes
-  useEffect(() => {
-    try {
-      if (currentUser) {
-        localStorage.setItem('ct_current_user_2026', JSON.stringify(currentUser));
-      } else {
-        localStorage.removeItem('ct_current_user_2026');
-      }
-    } catch (e) {}
-  }, [currentUser]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ct_participants_2026', JSON.stringify(participants));
-    } catch (e) {}
-  }, [participants]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ct_submissions_2026', JSON.stringify(submissions));
-    } catch (e) {}
-  }, [submissions]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('ct_league_weeks_2026', JSON.stringify(weeks));
-    } catch (e) {}
-  }, [weeks]);
-
-  // Strict role enforcement
-  // Ensure participants cannot access captain dashboard, and captains cannot access participant tabs or badges
-  useEffect(() => {
-    if (currentUser?.role !== 'captain' && currentTab === 'captain') {
-      setCurrentTab('challenges');
-    }
-    if (currentUser?.role === 'captain' && (currentTab === 'challenges' || currentTab === 'badges')) {
-      setCurrentTab('captain');
-    }
-  }, [currentUser, currentTab]);
-
-  // Modals & Alerts
-  const [showCaptainLoginModal, setShowCaptainLoginModal] = useState(false);
-  const [captainModalMode, setCaptainModalMode] = useState('signin'); // 'signin' or 'register'
-  const [captainName, setCaptainName] = useState('');
-  const [captainPasscode, setCaptainPasscode] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [participants, setParticipants] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [weeks, setWeeks] = useState(DEFAULT_WEEKS);
+  const [signinRequest, setSigninRequest] = useState(0);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [securityAlert, setSecurityAlert] = useState(null);
 
-  // Participant Enrollment Handler
-  const handleEnrollParticipant = ({ name, role, teamId, teamName }) => {
-    const newParticipant = {
-      id: `p_${Date.now()}`,
-      name,
-      role,
-      teamId,
-      teamName,
-      wk1: 0,
-      wk2: 0,
-      wk3: 0,
-      wk4: 0,
-      attendance: { prep: true, wk1: false, wk2: false, wk3: false, wk4: false },
-      // Induction earns Ready to Begin badge automatically per pack page 2 & 7
-      badges: ["ready_to_begin"]
+  const isCaptain = currentUser?.role === 'captain';
+
+  const showError = (err, fallback = 'Something went wrong. Please try again.') => {
+    console.error(err);
+    setSecurityAlert({ message: err?.message || fallback, time: new Date().toLocaleTimeString() });
+  };
+
+  // Pull the latest shared league data. RLS decides what each user is allowed to see.
+  const refresh = useCallback(async (user = currentUser) => {
+    if (!user) return;
+    try {
+      const data = await api.fetchLeague(user.role === 'captain');
+      setParticipants(data.participants);
+      setSubmissions(data.submissions);
+      setWeeks(data.weeks || DEFAULT_WEEKS);
+      // keep the signed-in user's own badges/attendance fresh
+      const me = data.participants.find(p => p.id === user.id);
+      if (me) setCurrentUser(u => (u ? { ...u, badges: me.badges, attendance: me.attendance } : u));
+    } catch (err) {
+      showError(err);
+    }
+  }, [currentUser]);
+
+  // Restore / react to the Supabase session (magic-link redirect lands here too)
+  useEffect(() => {
+    if (!isSupabaseConfigured) { setBooting(false); return; }
+
+    const loadUser = async (session) => {
+      if (!session) {
+        setCurrentUser(null);
+        setBooting(false);
+        return;
+      }
+      try {
+        const user = await api.fetchMyProfile(session.user.id);
+        setCurrentUser(user);
+        setCurrentTab(user.role === 'captain' ? 'captain' : 'challenges');
+        await refresh(user);
+      } catch (err) {
+        showError(err);
+      } finally {
+        setBooting(false);
+      }
     };
 
-    setParticipants(prev => [...prev, newParticipant]);
-    setCurrentUser(newParticipant);
-    setCurrentTab('challenges');
-  };
+    supabase.auth.getSession().then(({ data }) => loadUser(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') loadUser(session);
+    });
+    return () => sub.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Switch to previously enrolled user
-  const handleSelectExistingUser = (participant) => {
-    setCurrentUser(participant);
-    setCurrentTab('challenges');
-  };
+  // Keep data fresh when switching tabs or returning to the window (cheap alternative to realtime)
+  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentTab]);
+  useEffect(() => {
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refresh]);
 
-  // Sign out
-  const handleLogout = () => {
+  // UI-level role guard (the real enforcement is Row Level Security in the database)
+  useEffect(() => {
+    if (!isCaptain && currentTab === 'captain') setCurrentTab('challenges');
+    if (isCaptain && (currentTab === 'challenges' || currentTab === 'badges')) setCurrentTab('captain');
+  }, [isCaptain, currentTab]);
+
+  const handleLogout = async () => {
+    await api.signOut();
     setCurrentUser(null);
+    setParticipants([]);
+    setSubmissions([]);
     setCurrentTab('challenges');
     setSecurityAlert(null);
   };
 
-  // Update Challenge Handler (For Captain)
-  const handleUpdateChallenge = ({ weekNumber, dayIndex, updatedChallenge, updatedCriticalFocus }) => {
-    if (currentUser?.role !== 'captain') {
-      triggerSecurityViolation("Only verified Captains can set or edit challenges.");
+  // Run a captain-only write, then reload shared data
+  const captainAction = async (fn) => {
+    if (!isCaptain) {
+      triggerSecurityViolation('Only verified Captains can do that.');
       return;
     }
-
-    setWeeks(prevWeeks => prevWeeks.map(w => {
-      if (w.weekNumber === weekNumber) {
-        const updatedChallenges = [...w.challenges];
-        updatedChallenges[dayIndex] = updatedChallenge;
-        return {
-          ...w,
-          challenges: updatedChallenges,
-          criticalFocus: updatedCriticalFocus || w.criticalFocus
-        };
-      }
-      return w;
-    }));
+    try { await fn(); await refresh(); } catch (err) { showError(err); }
   };
 
-  // Reset Challenges to Default Pack
-  const handleResetChallenges = () => {
-    if (currentUser?.role !== 'captain') return;
-    setWeeks(DEFAULT_WEEKS);
-    try {
-      localStorage.removeItem('ct_league_weeks_2026');
-    } catch (e) {}
-  };
+  const handleUpdateChallenge = ({ weekNumber, dayIndex, updatedChallenge, updatedCriticalFocus }) =>
+    captainAction(async () => {
+      const next = weeks.map(w => {
+        if (w.weekNumber !== weekNumber) return w;
+        const challenges = [...w.challenges];
+        challenges[dayIndex] = updatedChallenge;
+        return { ...w, challenges, criticalFocus: updatedCriticalFocus || w.criticalFocus };
+      });
+      await api.saveWeeks(next);
+    });
+
+  const handleResetChallenges = () => captainAction(() => api.saveWeeks(null));
 
   // Simulated AI evaluation engine based on the Connect Talent 4-part rubric
   const evaluateRubricWithAi = (text) => {
@@ -204,203 +141,61 @@ export default function App() {
   };
 
   // Participant Submit Challenge
-  const handleSubmitChallenge = ({
-    weekNumber,
-    challengeDay,
-    challengeTitle,
-    submissionText,
-    mediaType,
-    attachedVoice,
-    attachedMedia,
-    isTeamMission,
-    isReflection
-  }) => {
-    if (!currentUser || currentUser.role === 'captain') {
-      triggerSecurityViolation("Only enrolled participants can submit challenge evidence.");
+  const handleSubmitChallenge = async (payload) => {
+    if (!currentUser || isCaptain) {
+      triggerSecurityViolation('Only enrolled participants can submit challenge evidence.');
       return;
     }
-
-    const aiEvaluation = evaluateRubricWithAi(submissionText);
-
-    const newSub = {
-      id: `sub_${Date.now()}`,
-      participantId: currentUser.id,
-      participantName: currentUser.name,
-      teamName: currentUser.teamName || "Phoenix",
-      weekNumber,
-      challengeDay,
-      challengeTitle,
-      submissionText,
-      mediaType,
-      attachedVoice,
-      attachedMedia,
-      aiScore: aiEvaluation,
-      aiNotes: aiEvaluation.notes,
-      status: 'pending',
-      submittedAt: `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      type: isTeamMission ? "Team Mission" : isReflection ? "Sunday Reflection" : "Daily Challenge"
-    };
-
-    setSubmissions(prev => [newSub, ...prev]);
-
-    // Check First Step badge upon submitting first challenge
-    setParticipants(prev => prev.map(p => {
-      if (p.id === currentUser.id && !p.badges.includes("first_step")) {
-        return { ...p, badges: [...p.badges, "first_step"] };
-      }
-      return p;
-    }));
-
-  };
-
-  // Captain Approves Submission
-  const handleApproveSubmission = (id) => {
-    if (currentUser?.role !== 'captain') {
-      triggerSecurityViolation("Only Captains can approve submissions.");
-      return;
+    try {
+      await api.insertSubmission(currentUser.id, payload, evaluateRubricWithAi(payload.submissionText));
+      await refresh();
+    } catch (err) {
+      showError(err, 'Could not save your submission. Please try again.');
     }
-
-    const targetSub = submissions.find(s => s.id === id);
-    if (!targetSub) return;
-
-    const awardedPoints = targetSub.aiScore?.total || 20;
-
-    setSubmissions(prev => prev.map(s => 
-      s.id === id 
-        ? { 
-            ...s, 
-            status: 'approved', 
-            approvedBy: currentUser.name, 
-            approvedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-          }
-        : s
-    ));
-
-    setParticipants(prev => prev.map(p => {
-      if (p.id === targetSub.participantId) {
-        const wkKey = targetSub.weekNumber === 1 ? 'wk1' : 'wk2';
-        const currentPoints = p[wkKey] || 0;
-        return {
-          ...p,
-          [wkKey]: currentPoints + awardedPoints
-        };
-      }
-      return p;
-    }));
   };
 
-  // Captain Adjusts Score
-const handleAdjustScore = (id, newScore) => {
-  if (currentUser?.role !== 'captain') return;
+  const handleApproveSubmission = (id) => captainAction(() => api.approveSubmission(id));
 
-  const val = Number(newScore);
+  const handleAdjustScore = (id, newScore) => {
+    const val = Number(newScore);
+    if (newScore === '' || !Number.isInteger(val) || val < 0 || val > 20) return;
+    const sub = submissions.find(s => s.id === id);
+    if (!sub) return;
+    return captainAction(() => api.adjustSubmissionScore(sub, val));
+  };
 
-  if (newScore === '' || !Number.isInteger(val) || val < 0 || val > 20) {
-    return;
-  }
-
-  setSubmissions(prev => prev.map(s =>
-    s.id === id
-      ? {
-          ...s,
-          aiScore: {
-            ...s.aiScore,
-            total: val
-          }
-        }
-      : s
-  ));
-};
-
-  // Captain Toggles Attendance
   const handleToggleAttendance = (participantId, sessionKey) => {
-    if (currentUser?.role !== 'captain') return;
-
-    setParticipants(prev => prev.map(p => {
-      if (p.id === participantId) {
-        return {
-          ...p,
-          attendance: {
-            ...p.attendance,
-            [sessionKey]: !p.attendance[sessionKey]
-          }
-        };
-      }
-      return p;
-    }));
+    const p = participants.find(x => x.id === participantId);
+    if (!p) return;
+    return captainAction(() =>
+      api.updateProfile(participantId, { attendance: { ...p.attendance, [sessionKey]: !p.attendance[sessionKey] } })
+    );
   };
 
-  // Captain Awards Recognition Badge
   const handleAwardBadge = (participantId, badgeId) => {
-    if (currentUser?.role !== 'captain') return;
-
-    setParticipants(prev => prev.map(p => {
-      if (p.id === participantId && !p.badges.includes(badgeId)) {
-        return { ...p, badges: [...p.badges, badgeId] };
-      }
-      return p;
-    }));
-  };
-
-  // Captain Authentication (Sign In & Register with Duplicate Prevention)
-  const handleCaptainLoginSubmit = (e) => {
-    e.preventDefault();
-    setLoginError('');
-
-    if (captainPasscode !== 'CAPTAIN2026') {
-      setLoginError('Invalid Passkey. Use CAPTAIN2026 for facilitator access.');
-      return;
-    }
-
-    const cleanName = captainName.trim();
-    if (!cleanName) {
-      setLoginError('Please enter your Facilitator / Captain Name.');
-      return;
-    }
-
-    if (captainModalMode === 'signin') {
-      // Find existing registered captain (case-insensitive)
-      const found = captains.find(c => c.name.trim().toLowerCase() === cleanName.toLowerCase());
-      if (!found) {
-        setLoginError(`No Captain found with name "${cleanName}". If this is your first time, switch to "Register New" above.`);
-        return;
-      }
-      setCurrentUser(found);
-      setCurrentTab('captain');
-      setShowCaptainLoginModal(false);
-      setCaptainPasscode('');
-      setCaptainName('');
-      setLoginError('');
-      setSecurityAlert(null);
-    } else {
-      // Register mode - prevent duplicate captain name
-      const isDuplicate = captains.some(c => c.name.trim().toLowerCase() === cleanName.toLowerCase());
-      if (isDuplicate) {
-        setLoginError(`A Captain named "${cleanName}" is already registered. Please switch to "Sign In" or choose another name.`);
-        return;
-      }
-
-      const newCap = {
-        id: `c_${Date.now()}`,
-        name: cleanName,
-        role: 'captain',
-        teamName: 'Staff'
-      };
-
-      setCaptains(prev => [...prev, newCap]);
-      setCurrentUser(newCap);
-      setCurrentTab('captain');
-      setShowCaptainLoginModal(false);
-      setCaptainPasscode('');
-      setCaptainName('');
-      setLoginError('');
-      setSecurityAlert(null);
-    }
+    const p = participants.find(x => x.id === participantId);
+    if (!p || p.badges.includes(badgeId)) return;
+    return captainAction(() => api.updateProfile(participantId, { badges: [...p.badges, badgeId] }));
   };
 
   const triggerSecurityViolation = (msg) => {
     setSecurityAlert({ message: msg, time: new Date().toLocaleTimeString() });
   };
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#fafbfc]">
+        <div className="max-w-md bg-white border border-amber-200 rounded-2xl p-6 text-sm text-slate-700 space-y-2 shadow-sm">
+          <h1 className="font-bold text-slate-900 text-base">Supabase isn't configured</h1>
+          <p>Copy <code>.env.example</code> to <code>.env.local</code>, add your project URL and anon key, then restart the dev server. See <code>supabase/README.md</code>.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (booting) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-500 text-sm">Loading…</div>;
+  }
 
   const pendingCount = submissions.filter(s => s.status === 'pending').length;
 
@@ -412,7 +207,7 @@ const handleAdjustScore = (id, newScore) => {
         setCurrentTab={setCurrentTab}
         currentUser={currentUser}
         onLogout={handleLogout}
-        onOpenCaptainLogin={() => setShowCaptainLoginModal(true)}
+        onOpenCaptainLogin={() => setSigninRequest(n => n + 1)}
         pendingCount={pendingCount}
       />
 
@@ -431,10 +226,9 @@ const handleAdjustScore = (id, newScore) => {
         {/* If no user is logged in, show clean Enrollment / Sign In view */}
         {!currentUser ? (
           <EnrollmentView
-            onEnroll={handleEnrollParticipant}
-            onSelectExistingUser={handleSelectExistingUser}
-            existingParticipants={participants}
-            onOpenCaptainLogin={() => setShowCaptainLoginModal(true)}
+            signinRequest={signinRequest}
+            onOpenCaptainLogin={() => setSigninRequest(n => n + 1)}
+            onOpenCaptainLogin={() => setSigninRequest(n => n + 1)}
           />
         ) : (
           /* User is Enrolled / Logged in */
@@ -483,116 +277,6 @@ const handleAdjustScore = (id, newScore) => {
           </>
         )}
       </main>
-
-      {/* Captain Sign-In & Registration Modal */}
-      {showCaptainLoginModal && (
-        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-7 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
-                {captainModalMode === 'signin' ? 'Captain Sign-In' : 'Register New Captain'}
-              </h3>
-              <button 
-                onClick={() => {
-                  setShowCaptainLoginModal(false);
-                  setLoginError('');
-                }} 
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Toggle Mode: Sign In vs Register */}
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => { setCaptainModalMode('signin'); setLoginError(''); }}
-                className={`flex-1 py-1.5 rounded-lg transition ${
-                  captainModalMode === 'signin'
-                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Returning Sign-In
-              </button>
-              <button
-                type="button"
-                onClick={() => { setCaptainModalMode('register'); setLoginError(''); }}
-                className={`flex-1 py-1.5 rounded-lg transition ${
-                  captainModalMode === 'register'
-                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Register New
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500 font-medium">
-              {captainModalMode === 'signin'
-                ? 'Enter your registered Captain name and passkey to access your dashboard.'
-                : 'Register your Captain name and facilitator passkey (CAPTAIN2026).'}
-            </p>
-
-            <form onSubmit={handleCaptainLoginSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Captain / Facilitator Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Coach Morgan or Alex"
-                  value={captainName}
-                  onChange={(e) => { setCaptainName(e.target.value); setLoginError(''); }}
-                  className="w-full border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none"
-                  autoFocus
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Facilitator Passkey
-                </label>
-                <input
-                  type="password"
-                  placeholder="Passkey (CAPTAIN2026)"
-                  value={captainPasscode}
-                  onChange={(e) => { setCaptainPasscode(e.target.value); setLoginError(''); }}
-                  className="w-full border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none"
-                  required
-                />
-              </div>
-
-              {loginError && (
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 font-semibold leading-relaxed">
-                  {loginError}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCaptainLoginModal(false);
-                    setLoginError('');
-                  }}
-                  className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white font-bold rounded-xl text-xs sm:text-sm transition shadow-sm"
-                >
-                  {captainModalMode === 'signin' ? 'Sign In as Captain' : 'Register Captain'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* WhatsApp Broadcast Templates Modal */}
       <WhatsAppTemplatesModal

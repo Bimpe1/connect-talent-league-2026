@@ -1,0 +1,194 @@
+-- Connect Talent League 2026 — Supabase schema
+-- Run once in the Supabase dashboard: SQL Editor -> New query -> paste -> Run.
+-- Safe to re-run (idempotent where practical).
+
+-- ---------------------------------------------------------------
+-- Tables
+-- ---------------------------------------------------------------
+create table if not exists public.profiles (
+  id          uuid primary key references auth.users(id) on delete cascade,
+  email       text not null,                       -- private: captains only (see RLS + leaderboard view)
+  name        text not null,
+  kind        text not null default 'learner' check (kind in ('learner','volunteer')),
+  role        text not null default 'participant' check (role in ('participant','captain')),
+  team_id     text,
+  team_name   text,
+  attendance  jsonb not null default '{"prep":true,"wk1":false,"wk2":false,"wk3":false,"wk4":false}',
+  badges      text[] not null default '{ready_to_begin}',
+  created_at  timestamptz not null default now()
+);
+create unique index if not exists profiles_name_unique on public.profiles (lower(trim(name)));
+
+create table if not exists public.submissions (
+  id                uuid primary key default gen_random_uuid(),
+  participant_id    uuid not null references public.profiles(id) on delete cascade,
+  participant_name  text not null,
+  team_name         text,
+  week_number       int  not null check (week_number between 1 and 4),
+  challenge_day     text,
+  challenge_title   text,
+  submission_text   text,
+  media_type        text,
+  attached_voice    text,
+  attached_media    text,
+  ai_score          jsonb not null,                 -- {attempt,reason,evidence,conclusion,total,notes}
+  ai_notes          text,
+  type              text not null default 'Daily Challenge',
+  status            text not null default 'pending' check (status in ('pending','approved')),
+  approved_by       text,
+  approved_at       timestamptz,
+  created_at        timestamptz not null default now(),
+  constraint ai_total_range check ((ai_score->>'total')::int between 0 and 20)
+);
+create index if not exists submissions_participant_idx on public.submissions (participant_id);
+
+-- Single-row table holding the (captain-editable) curriculum. NULL = use built-in default.
+create table if not exists public.league_config (
+  id     int primary key default 1 check (id = 1),
+  weeks  jsonb
+);
+insert into public.league_config (id, weeks) values (1, null) on conflict do nothing;
+
+-- ---------------------------------------------------------------
+-- Helpers
+-- ---------------------------------------------------------------
+create or replace function public.is_captain() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'captain');
+$$;
+
+-- Create a profile for every new auth user. Role is ALWAYS 'participant' here;
+-- promote captains manually (see bottom of file). Metadata comes from the sign-up form.
+create or replace function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email, name, kind, team_id, team_name)
+  values (
+    new.id,
+    new.email,
+    coalesce(nullif(trim(new.raw_user_meta_data->>'name'), ''), split_part(new.email, '@', 1)),
+    case when new.raw_user_meta_data->>'kind' = 'volunteer' then 'volunteer' else 'learner' end,
+    new.raw_user_meta_data->>'team_id',
+    new.raw_user_meta_data->>'team_name'
+  );
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Fill participant_name/team_name server-side so they can't be forged.
+create or replace function public.submissions_before_insert() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  select name, team_name into new.participant_name, new.team_name
+  from public.profiles where id = new.participant_id;
+  return new;
+end $$;
+
+drop trigger if exists submissions_before_insert on public.submissions;
+create trigger submissions_before_insert before insert on public.submissions
+  for each row execute function public.submissions_before_insert();
+
+-- Award "first_step" on a participant's first submission.
+create or replace function public.submissions_after_insert() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update public.profiles
+     set badges = array_append(badges, 'first_step')
+   where id = new.participant_id and not ('first_step' = any(badges));
+  return new;
+end $$;
+
+drop trigger if exists submissions_after_insert on public.submissions;
+create trigger submissions_after_insert after insert on public.submissions
+  for each row execute function public.submissions_after_insert();
+
+-- Stamp approval time/approver server-side.
+create or replace function public.submissions_before_update() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'approved' and old.status <> 'approved' then
+    new.approved_at := now();
+    select name into new.approved_by from public.profiles where id = auth.uid();
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists submissions_before_update on public.submissions;
+create trigger submissions_before_update before update on public.submissions
+  for each row execute function public.submissions_before_update();
+
+-- ---------------------------------------------------------------
+-- Leaderboard view: public-safe fields only (NO email). Points are DERIVED from
+-- approved submissions, so scores can never drift from the approval queue.
+-- Runs with owner rights so participants can see everyone's totals.
+-- ---------------------------------------------------------------
+create or replace view public.leaderboard as
+select
+  p.id, p.name, p.kind as role, p.team_id as "teamId", p.team_name as "teamName",
+  p.attendance, p.badges,
+  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 1), 0)::int as wk1,
+  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 2), 0)::int as wk2,
+  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 3), 0)::int as wk3,
+  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 4), 0)::int as wk4
+from public.profiles p
+left join public.submissions s on s.participant_id = p.id and s.status = 'approved'
+where p.role = 'participant'
+group by p.id;
+
+revoke all on public.leaderboard from anon;
+grant select on public.leaderboard to authenticated;
+
+-- ---------------------------------------------------------------
+-- Row Level Security
+-- ---------------------------------------------------------------
+alter table public.profiles      enable row level security;
+alter table public.submissions   enable row level security;
+alter table public.league_config enable row level security;
+
+-- profiles: read own, captains read all. Only captains may update (attendance, badges).
+-- Participants have NO update/insert/delete, so nobody can self-promote to captain.
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles for select
+  using (id = auth.uid() or public.is_captain());
+
+drop policy if exists profiles_update_captain on public.profiles;
+create policy profiles_update_captain on public.profiles for update
+  using (public.is_captain()) with check (public.is_captain());
+
+-- submissions
+drop policy if exists submissions_select on public.submissions;
+create policy submissions_select on public.submissions for select
+  using (participant_id = auth.uid() or public.is_captain());
+
+drop policy if exists submissions_insert on public.submissions;
+create policy submissions_insert on public.submissions for insert
+  with check (participant_id = auth.uid() and status = 'pending'
+              and not public.is_captain());
+
+drop policy if exists submissions_update_captain on public.submissions;
+create policy submissions_update_captain on public.submissions for update
+  using (public.is_captain()) with check (public.is_captain());
+-- no delete policy => nobody can delete (audit trail)
+
+-- league_config: everyone signed in can read, captains write
+drop policy if exists config_select on public.league_config;
+create policy config_select on public.league_config for select using (auth.role() = 'authenticated');
+drop policy if exists config_update_captain on public.league_config;
+create policy config_update_captain on public.league_config for update
+  using (public.is_captain()) with check (public.is_captain());
+
+-- Team seat counts for the enrolment screen (works before login, exposes counts only).
+create or replace function public.team_counts() returns table (team_id text, n bigint)
+language sql stable security definer set search_path = public as $$
+  select team_id, count(*) from public.profiles where role = 'participant' group by team_id;
+$$;
+grant execute on function public.team_counts() to anon, authenticated;
+
+-- ---------------------------------------------------------------
+-- Make someone a Captain (run manually AFTER they have signed in once):
+--   update public.profiles set role = 'captain', team_name = 'Staff'
+--   where email = 'coach@example.com';
+-- ---------------------------------------------------------------

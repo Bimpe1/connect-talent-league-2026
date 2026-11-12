@@ -1,82 +1,78 @@
-import React, { useState } from 'react';
-import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail } from 'lucide-react';
+import { sendMagicLink, fetchTeamCounts } from '../lib/api';
 import { TEAMS } from '../data/curriculum';
 
-export default function EnrollmentView({ 
-  onEnroll, 
-  onSelectExistingUser,
-  existingParticipants = [],
-  onOpenCaptainLogin 
-}) {
+export default function EnrollmentView({ signinRequest = 0, onOpenCaptainLogin }) {
   const [tab, setTab] = useState('enroll'); // 'enroll' or 'signin'
 
   // Enrollment fields
   const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [consent, setConsent] = useState(false);
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
   const [selectedTeamId, setSelectedTeamId] = useState(TEAMS[0].id);
   const [enrollError, setEnrollError] = useState('');
 
   // Sign in fields
-  const [signInName, setSignInName] = useState('');
+  const [signInEmail, setSignInEmail] = useState('');
   const [signInError, setSignInError] = useState('');
 
-  // Handle New Participant Enrollment
+  const [sending, setSending] = useState(false);
+  const [sentTo, setSentTo] = useState('');
+  const [teamCounts, setTeamCounts] = useState({});
+
+  useEffect(() => { fetchTeamCounts().then(setTeamCounts).catch(() => {}); }, []);
+
+  // "Captain Sign-In" buttons elsewhere jump straight to the sign-in tab
+  useEffect(() => { if (signinRequest) { setTab('signin'); setSentTo(''); } }, [signinRequest]);
+
+  const send = async (addr, profile, setError) => {
+    setSending(true);
+    setError('');
+    try {
+      await sendMagicLink({ email: addr, profile });
+      setSentTo(addr);
+    } catch (err) {
+      setError(err.message || 'Could not send the sign-in link. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleEnrollSubmit = (e) => {
     e.preventDefault();
-    setEnrollError('');
-
     const cleanName = displayName.trim();
-    if (!cleanName) {
-      setEnrollError('Please enter an approved display name (e.g. Jordan T.)');
-      return;
-    }
-
-    // Check for duplicate name (case-insensitive)
-    const isDuplicate = existingParticipants.some(
-      p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
-    );
-
-    if (isDuplicate) {
-      setEnrollError(
-        `"${cleanName}" is already enrolled. If this is you, click "Sign In" above. If you are another participant with the same name, please add an extra initial or number (e.g. ${cleanName} 2).`
-      );
-      return;
-    }
-
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanName) { setEnrollError('Please enter an approved display name (e.g. Jordan T.)'); return; }
+    if (!consent) { setEnrollError('Please tick the box to agree to us storing your email.'); return; }
     const team = TEAMS.find(t => t.id === selectedTeamId) || TEAMS[0];
-    onEnroll({
-      name: cleanName,
-      role,
-      teamId: team.id,
-      teamName: team.name,
-    });
+    send(cleanEmail, { name: cleanName, kind: role, team_id: team.id, team_name: team.name }, setEnrollError);
   };
 
-  // Handle Returning Participant Sign In
   const handleSignInSubmit = (e) => {
     e.preventDefault();
-    setSignInError('');
-
-    const cleanName = signInName.trim();
-    if (!cleanName) {
-      setSignInError('Please enter your enrolled display name.');
-      return;
-    }
-
-    // Lookup participant
-    const found = existingParticipants.find(
-      p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
-    );
-
-    if (!found) {
-      setSignInError(
-        `No enrolled participant found matching "${cleanName}". Please verify the spelling or click "Enroll as New" to register.`
-      );
-      return;
-    }
-
-    onSelectExistingUser(found);
+    send(signInEmail.trim().toLowerCase(), undefined, setSignInError);
   };
+
+  if (sentTo) {
+    return (
+      <div className="max-w-xl mx-auto py-10 px-4">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 text-center space-y-3">
+          <div className="mx-auto w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <Mail size={22} />
+          </div>
+          <h2 className="text-xl font-extrabold text-[#0a2558] font-heading">Check your inbox</h2>
+          <p className="text-sm text-slate-600">
+            We sent a sign-in link to <span className="font-bold">{sentTo}</span>. Open it on this device to enter the league. It can take a minute, so check spam too.
+          </p>
+          <button onClick={() => setSentTo('')} className="text-xs font-bold text-[#6d28d9] underline">
+            Use a different email
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto py-5 sm:py-8 px-3.5 sm:px-4 space-y-6">
@@ -141,20 +137,6 @@ export default function EnrollmentView({
                 <AlertCircle size={18} className="text-rose-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <span>{enrollError}</span>
-                  {enrollError.includes('already enrolled') && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTab('signin');
-                        setSignInName(displayName);
-                        setSignInError('');
-                        setEnrollError('');
-                      }}
-                      className="block mt-2 font-bold underline text-rose-900 hover:text-rose-950"
-                    >
-                      Switch to Sign In as "{displayName}" →
-                    </button>
-                  )}
                 </div>
               </div>
             )}
@@ -177,10 +159,31 @@ export default function EnrollmentView({
               </span>
             </div>
 
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                2. Your Email
+              </label>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setEnrollError(''); }}
+                className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                required
+              />
+              <label className="flex items-start gap-2 text-xs text-slate-500 font-normal cursor-pointer">
+                <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5" />
+                <span>
+                  I agree to Connect Talent storing my email to sign me in and send league updates. It is never shown to other participants and is deleted after the programme.
+                </span>
+              </label>
+            </div>
+
             {/* Role Selection */}
             <div className="space-y-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                2. Your Role
+                3. Your Role
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -219,12 +222,12 @@ export default function EnrollmentView({
             {/* Team Selection */}
             <div className="space-y-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                3. Choose Your Team (From the 7 Official Teams)
+                4. Choose Your Team (From the 7 Official Teams)
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {TEAMS.map(t => {
                   const isSelected = selectedTeamId === t.id;
-                  const enrolledCount = existingParticipants.filter(p => p.teamId === t.id).length;
+                  const enrolledCount = teamCounts[t.id] || 0;
                   return (
                     <button
                       key={t.id}
@@ -247,9 +250,10 @@ export default function EnrollmentView({
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
+              disabled={sending}
+              className="w-full disabled:opacity-60 py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
             >
-              <span>Enroll &amp; Start League</span>
+              <span>{sending ? 'Sending link…' : 'Email Me a Sign-In Link'}</span>
               <ArrowRight size={18} />
             </button>
           </form>
@@ -262,7 +266,7 @@ export default function EnrollmentView({
           <form onSubmit={handleSignInSubmit} className="space-y-6">
             
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-              Enter the approved display name you used when you enrolled to access your daily challenges, submissions, and badges.
+              Enter the email you enrolled with and we'll send you a one-tap sign-in link. Facilitators / Captains sign in here too.
             </div>
 
             {/* Error Notification */}
@@ -282,32 +286,29 @@ export default function EnrollmentView({
               </div>
             )}
 
-            {/* Display Name Input */}
             <div className="space-y-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Your Enrolled Display Name
+                Your Email
               </label>
               <input
-                type="text"
-                placeholder="e.g. Jordan T."
-                value={signInName}
-                onChange={e => { setSignInName(e.target.value); setSignInError(''); }}
+                type="email"
+                placeholder="you@example.com"
+                value={signInEmail}
+                onChange={e => { setSignInEmail(e.target.value); setSignInError(''); }}
                 className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
                 required
                 autoFocus
               />
-              <span className="text-xs text-slate-400 block font-normal">
-                Case-insensitive (e.g. "jordan t" or "Jordan T.")
-              </span>
             </div>
 
             {/* Sign In Button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
+              disabled={sending}
+              className="w-full disabled:opacity-60 py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
             >
               <LogIn size={18} />
-              <span>Sign In to My Account</span>
+              <span>{sending ? 'Sending link…' : 'Email Me a Sign-In Link'}</span>
             </button>
           </form>
         )}
@@ -319,7 +320,7 @@ export default function EnrollmentView({
           onClick={onOpenCaptainLogin}
           className="text-xs sm:text-sm font-bold text-[#0a2558] bg-indigo-50/80 hover:bg-indigo-100/90 border border-indigo-200/90 px-4 py-2.5 rounded-xl transition shadow-sm"
         >
-          Facilitator / Captain Sign-In &amp; Register
+          Facilitator / Captain Sign-In
         </button>
       </div>
     </div>
