@@ -138,7 +138,10 @@ export default function App() {
       return false;
     }
     try {
-      await api.insertSubmission(currentUser.id, payload, evaluateRubric(payload.submissionText));
+      const files = await api.uploadAttachments(currentUser.id, payload); // photo / voice -> Storage
+      await api.insertSubmission(currentUser.id, { ...payload, ...files }, payload.isAttendance
+          ? { total: 10, notes: 'In-person attendance claimed by participant.' } // the database also forces this
+          : evaluateRubric(payload.submissionText));
       await refresh();
       return true;
     } catch (err) {
@@ -157,14 +160,6 @@ export default function App() {
     const sub = submissions.find(s => s.id === id);
     if (!sub) return;
     return captainAction(() => api.adjustSubmissionScore(sub, val));
-  };
-
-  const handleToggleAttendance = (participantId, sessionKey) => {
-    const p = participants.find(x => x.id === participantId);
-    if (!p) return;
-    return captainAction(() =>
-      api.updateProfile(participantId, { attendance: { ...p.attendance, [sessionKey]: !p.attendance[sessionKey] } })
-    );
   };
 
   const handleAwardBadge = (participantId, badgeId) => {
@@ -270,7 +265,6 @@ export default function App() {
                 onSaveSchedule={handleSaveSchedule}
                 onApproveSubmission={handleApproveSubmission}
                 onAdjustScore={handleAdjustScore}
-                onToggleAttendance={handleToggleAttendance}
                 onAwardBadge={handleAwardBadge}
                 onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
               />

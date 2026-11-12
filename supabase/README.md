@@ -9,12 +9,29 @@
 5. **Authentication -> Providers -> Email**: keep "Enable Email provider" on. Passwords are not used.
 6. **Authentication -> SMTP Settings** (recommended): plug in your SMTP provider (Resend, Brevo, ...).
    Supabase's built-in sender is limited to a few emails per hour, which is not enough for a cohort.
-7. Sign in once through the app with each facilitator's email, then promote them:
+7. **Create each facilitator's account**, then promote them. The *Returning Sign-In* tab deliberately does not
+   create accounts (a mistyped email would otherwise create a stray one), so either:
+   - Authentication -> Users -> **Invite user** (enter their email; they click the link to sign in), or
+   - have them enrol as a participant once (this uses a team place until you promote them).
+
+   Then, in the SQL editor:
 
 ```sql
-update public.profiles set role = 'captain', team_name = 'Staff'
+update public.profiles set role = 'captain', name = 'Coach Morgan', team_name = 'Staff', team_id = null
 where email = 'coach@example.com';
 ```
+   Promoted captains don't appear on the leaderboard and don't count towards team places.
+8. **Storage** needs no setup: `schema.sql` creates a private `evidence` bucket (2 MB per file) for photos,
+   drawings and voice notes, with per-user folders. Check it exists under Storage.
+9. Edit the **Confirm signup** and **Magic Link** email templates (Authentication -> Email Templates) so the
+   wording suits participants. New users get the first, returning users the second.
+
+## Things to know
+- A team place is taken when the sign-in link is **sent**, not when it is clicked. A mistyped email holds a
+  place until a captain removes that user (Authentication -> Users -> delete).
+- Participants can claim **In-Person Attendance** once per week (any day of a started week, not limited to the
+  09:00-20:00 window). A captain approves it, which adds the 10 TP bonus. The score is fixed by the database.
+- Each challenge can be submitted once per participant.
 
 ## Time-gated challenges
 Daily challenges (Mon-Fri) open at **09:00** and close at **20:00 UK time** on their date. Saturday team
@@ -28,9 +45,10 @@ per-day overrides (open all day, locked, or custom hours). It is stored in `leag
 `start_date` (Monday of week 1, default 2026-11-16).
 
 ## After week 4
-Delete personal data: `truncate public.profiles cascade;` then remove the users under
-Authentication -> Users (or delete the project).
+Delete personal data: `truncate public.profiles cascade;`, remove the users under
+Authentication -> Users, and empty the `evidence` bucket under Storage (or simply delete the project).
 
 ## Known follow-ups
-- Photos/voice notes are still stored as base64 text in `submissions`; move to Supabase Storage.
-- The "AI" rubric score is still a client-side keyword check (see `evaluateRubricWithAi`).
+- The rubric score is a client-side keyword check (`src/lib/scoring.js`), not AI. Captains review every score.
+- A participant sets the suggested score for a normal challenge from the browser; the captain's approval is the
+  real check. (Attendance claims are fixed at 10 by the database.)

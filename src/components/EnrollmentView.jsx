@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail } from 'lucide-react';
-import { sendMagicLink, fetchTeamCounts } from '../lib/api';
+import { sendMagicLink, fetchTeamCounts, nameTaken } from '../lib/api';
 import { TEAMS } from '../data/curriculum';
 
 export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLogin }) {
@@ -41,7 +41,7 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
     }
   };
 
-  const handleEnrollSubmit = (e) => {
+  const handleEnrollSubmit = async (e) => {
     e.preventDefault();
     const cleanName = displayName.trim();
     const cleanEmail = email.trim().toLowerCase();
@@ -54,6 +54,15 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
       setEnrollError(`Team "${team.name}" is full (${team.capacity}/${team.capacity}). Please pick another team.`);
       return;
     }
+    // Check the display name up front so the message is clear (the database enforces uniqueness too)
+    setSending(true);
+    try {
+      if (await nameTaken(cleanName)) {
+        setSending(false);
+        setEnrollError(`"${cleanName}" is already enrolled. If that is you, use "Returning Sign-In" above. If you are a different person with the same name, add an initial or number (e.g. ${cleanName} 2).`);
+        return;
+      }
+    } catch { /* if the check fails, carry on: the database still rejects a duplicate */ }
     send(cleanEmail, { name: cleanName, kind: role, team_id: team.id, team_name: team.name }, setEnrollError);
   };
 

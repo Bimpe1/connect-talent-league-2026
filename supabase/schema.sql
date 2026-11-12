@@ -29,8 +29,9 @@ create table if not exists public.submissions (
   challenge_title   text,
   submission_text   text,
   media_type        text,
-  attached_voice    text,
-  attached_media    text,
+  attached_voice    jsonb,                          -- {path, duration, transcript, mime}: file lives in Storage
+  attached_media    jsonb,                          -- {path, type, name}: file lives in Storage
+  is_attendance     boolean not null default false, -- weekly in-person attendance claim (+10 TP bonus once approved)
   ai_score          jsonb not null,                 -- {attempt,reason,evidence,conclusion,total,notes}
   ai_notes          text,
   type              text not null default 'Daily Challenge',
@@ -41,6 +42,11 @@ create table if not exists public.submissions (
   constraint ai_total_range check ((ai_score->>'total')::int between 0 and 20)
 );
 create index if not exists submissions_participant_idx on public.submissions (participant_id);
+-- One submission per challenge, and one attendance claim per week (stops duplicate-points farming).
+create unique index if not exists submissions_one_per_challenge
+  on public.submissions (participant_id, week_number, challenge_day) where not is_attendance;
+create unique index if not exists submissions_one_attendance_per_week
+  on public.submissions (participant_id, week_number) where is_attendance;
 
 -- Single-row table holding the (captain-editable) curriculum. NULL = use built-in default.
 create table if not exists public.league_config (
@@ -105,6 +111,11 @@ language plpgsql security definer set search_path = public as $$
 begin
   select name, team_name into new.participant_name, new.team_name
   from public.profiles where id = new.participant_id;
+  if new.is_attendance then
+    -- fixed server-side so a participant can't award themselves more
+    new.ai_score := '{"total":10,"notes":"In-person attendance claimed by participant."}'::jsonb;
+    new.type := 'In-Person Attendance';
+  end if;
   return new;
 end $$;
 
@@ -149,11 +160,19 @@ create trigger submissions_before_update before update on public.submissions
 create or replace view public.leaderboard as
 select
   p.id, p.name, p.kind as role, p.team_id as "teamId", p.team_name as "teamName",
-  p.attendance, p.badges,
-  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 1), 0)::int as wk1,
-  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 2), 0)::int as wk2,
-  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 3), 0)::int as wk3,
-  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 4), 0)::int as wk4
+  -- attendance per week = an APPROVED in-person attendance claim exists (the 10 TP bonus is added client-side)
+  jsonb_build_object(
+    'prep', coalesce((p.attendance->>'prep')::boolean, true),
+    'wk1', coalesce(bool_or(s.is_attendance and s.week_number = 1), false),
+    'wk2', coalesce(bool_or(s.is_attendance and s.week_number = 2), false),
+    'wk3', coalesce(bool_or(s.is_attendance and s.week_number = 3), false),
+    'wk4', coalesce(bool_or(s.is_attendance and s.week_number = 4), false)
+  ) as attendance,
+  p.badges,
+  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 1 and not s.is_attendance), 0)::int as wk1,
+  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 2 and not s.is_attendance), 0)::int as wk2,
+  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 3 and not s.is_attendance), 0)::int as wk3,
+  coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 4 and not s.is_attendance), 0)::int as wk4
 from public.profiles p
 left join public.submissions s on s.participant_id = p.id and s.status = 'approved'
 where p.role = 'participant'
@@ -263,6 +282,15 @@ create or replace function public.submissions_gate() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare w record;
 begin
+  if new.is_attendance then
+    -- Attendance claims may be made on any day of a week that has started (not bound to 09:00-20:00).
+    if coalesce((select (schedule->>'gating')::boolean from public.league_config where id = 1), true)
+       and now() < (select min(cw.opens_at) from public.challenge_windows() cw where cw.week_number = new.week_number) then
+      raise exception 'This week has not started yet.';
+    end if;
+    return new;
+  end if;
+
   select * into w from public.challenge_windows() cw
    where cw.week_number = new.week_number and cw.day_name = new.challenge_day;
   if not found then
@@ -283,6 +311,35 @@ end $$;
 drop trigger if exists submissions_gate on public.submissions;
 create trigger submissions_gate before insert on public.submissions
   for each row execute function public.submissions_gate();
+
+-- Is a display name already taken? (names are public on the leaderboard anyway.) Lets the enrolment
+-- form give a clear message instead of a generic sign-up failure.
+create or replace function public.name_taken(n text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where lower(trim(name)) = lower(trim(n)));
+$$;
+grant execute on function public.name_taken(text) to anon, authenticated;
+
+-- ---------------------------------------------------------------
+-- Evidence files (photos, drawings, voice notes) live in a PRIVATE Storage bucket, in a folder per
+-- participant. The database only stores the small file path. 2 MB cap per file.
+-- Participants can add files to their own folder and read their own; captains can read all.
+-- Nobody can overwrite or delete (audit trail).
+-- ---------------------------------------------------------------
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('evidence', 'evidence', false, 2097152,
+        array['image/jpeg','image/png','audio/webm','audio/mp4','audio/ogg','audio/mpeg','audio/aac','audio/x-m4a'])
+on conflict (id) do update
+  set file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types, public = false;
+
+drop policy if exists evidence_insert on storage.objects;
+create policy evidence_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'evidence' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists evidence_select on storage.objects;
+create policy evidence_select on storage.objects for select to authenticated
+  using (bucket_id = 'evidence'
+         and ((storage.foldername(name))[1] = auth.uid()::text or public.is_captain()));
 
 -- ---------------------------------------------------------------
 -- Make someone a Captain (run manually AFTER they have signed in once):
