@@ -1,13 +1,27 @@
 import { neon } from '@neondatabase/serverless';
 
 function getConnectionString() {
-  return (
+  // Check known standard variable names
+  const direct =
     process.env.POSTGRES_URL ||
     process.env.DATABASE_URL ||
+    process.env.STORAGE_URL ||
     process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    ''
-  );
+    process.env.POSTGRES_URL_NON_POOLING;
+
+  if (direct) return direct;
+
+  // Auto-detect any postgres connection string injected by Vercel / Neon
+  for (const [key, value] of Object.entries(process.env)) {
+    if (
+      typeof value === 'string' &&
+      (value.startsWith('postgres://') || value.startsWith('postgresql://'))
+    ) {
+      return value;
+    }
+  }
+
+  return '';
 }
 
 export function getDb() {
