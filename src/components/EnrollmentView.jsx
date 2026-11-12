@@ -10,15 +10,10 @@ export default function EnrollmentView({
 }) {
   const [tab, setTab] = useState('enroll'); // 'enroll' or 'signin'
 
-  // Default to first team with open capacity
-  const firstAvailableTeam = TEAMS.find(
-    t => existingParticipants.filter(p => p.teamId === t.id).length < t.capacity
-  ) || TEAMS[0];
-
-  // Enrollment fields
+  // Enrollment fields - NO automatic team pre-selection
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
-  const [selectedTeamId, setSelectedTeamId] = useState(firstAvailableTeam.id);
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [enrollError, setEnrollError] = useState('');
 
   // Check if entire League is full
@@ -41,6 +36,12 @@ export default function EnrollmentView({
       return;
     }
 
+    // Require explicit team selection
+    if (!selectedTeamId) {
+      setEnrollError('Please select a team from the available teams below to continue.');
+      return;
+    }
+
     // Check for duplicate name (case-insensitive)
     const isDuplicate = existingParticipants.some(
       p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
@@ -53,7 +54,12 @@ export default function EnrollmentView({
       return;
     }
 
-    const team = TEAMS.find(t => t.id === selectedTeamId) || TEAMS[0];
+    const team = TEAMS.find(t => t.id === selectedTeamId);
+    if (!team) {
+      setEnrollError('Please select a valid team.');
+      return;
+    }
+
     const teamMembersCount = existingParticipants.filter(p => p.teamId === team.id).length;
 
     // Hard Capacity Enforcement (per team capacity: 5 or 6 places)
@@ -240,12 +246,18 @@ export default function EnrollmentView({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  3. Choose Your Team (From the 7 Official Teams)
+                  3. Choose Your Team (Click to select)
                 </label>
                 <span className="text-[11px] font-semibold text-slate-500">
                   {existingParticipants.length}/40 League places filled
                 </span>
               </div>
+
+              {!selectedTeamId && !allTeamsFull && (
+                <p className="text-xs text-purple-700 bg-purple-50 border border-purple-200 px-3.5 py-1.5 rounded-xl font-medium">
+                  Please click on one of the teams below to select your team.
+                </p>
+              )}
 
               {allTeamsFull ? (
                 <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 text-amber-900 text-xs sm:text-sm font-medium">
@@ -263,17 +275,27 @@ export default function EnrollmentView({
                         key={t.id}
                         type="button"
                         disabled={isFull}
-                        onClick={() => !isFull && setSelectedTeamId(t.id)}
+                        onClick={() => {
+                          if (!isFull) {
+                            setSelectedTeamId(t.id);
+                            setEnrollError('');
+                          }
+                        }}
                         className={`p-3 rounded-xl border-2 text-left transition flex flex-col justify-between ${
                           isFull
                             ? 'border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-60'
                             : isSelected
-                            ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
+                            ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm ring-2 ring-purple-300'
                             : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-center justify-between w-full">
                           <span className="font-bold text-sm block">{t.name}</span>
+                          {isSelected && !isFull && (
+                            <span className="w-4 h-4 rounded-full bg-[#6d28d9] text-white flex items-center justify-center text-[10px]">
+                              <Check size={10} />
+                            </span>
+                          )}
                           {isFull && (
                             <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">
                               Full
