@@ -57,11 +57,32 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.profiles where id = auth.uid() and role = 'captain');
 $$;
 
+-- Hard team capacity limits (per the official pack; 40 places). Enforced here, not just in the UI,
+-- so two people racing for the last place can't both get it.
+create or replace function public.team_capacity(tid text) returns int
+language sql immutable as $$
+  select case tid
+    when 'phoenix' then 6 when 'vision' then 5 when 'unity' then 6 when 'hope' then 6
+    when 'spark' then 5 when 'talent_stars' then 6 when 'bridge' then 6 else null end;
+$$;
+
 -- Create a profile for every new auth user. Role is ALWAYS 'participant' here;
 -- promote captains manually (see bottom of file). Metadata comes from the sign-up form.
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  tid text := new.raw_user_meta_data->>'team_id';
+  cap int  := public.team_capacity(tid);
 begin
+  if tid is not null and cap is null then
+    raise exception 'Unknown team';
+  end if;
+  if cap is not null then
+    perform pg_advisory_xact_lock(hashtext('team:' || tid));  -- serialise concurrent sign-ups per team
+    if (select count(*) from public.profiles where team_id = tid and role = 'participant') >= cap then
+      raise exception 'Team is full';
+    end if;
+  end if;
   insert into public.profiles (id, email, name, kind, team_id, team_name)
   values (
     new.id,

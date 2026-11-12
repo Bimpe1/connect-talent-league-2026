@@ -11,7 +11,7 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
-  const [selectedTeamId, setSelectedTeamId] = useState(TEAMS[0].id);
+  const [selectedTeamId, setSelectedTeamId] = useState(null); // no auto pre-selection: participant must choose
   const [enrollError, setEnrollError] = useState('');
 
   // Sign in fields
@@ -21,6 +21,9 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState('');
   const [teamCounts, setTeamCounts] = useState({});
+  const totalEnrolled = TEAMS.reduce((n, t) => n + (teamCounts[t.id] || 0), 0);
+  const totalCapacity = TEAMS.reduce((n, t) => n + t.capacity, 0);
+  const allTeamsFull = TEAMS.every(t => (teamCounts[t.id] || 0) >= t.capacity);
 
   useEffect(() => { fetchTeamCounts().then(setTeamCounts).catch(() => {}); }, []);
 
@@ -44,7 +47,13 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanName) { setEnrollError('Please enter an approved display name (e.g. Jordan T.)'); return; }
     if (!consent) { setEnrollError('Please tick the box to agree to us storing your email.'); return; }
-    const team = TEAMS.find(t => t.id === selectedTeamId) || TEAMS[0];
+    if (!selectedTeamId) { setEnrollError('Please select a team from the available teams below to continue.'); return; }
+    const team = TEAMS.find(t => t.id === selectedTeamId);
+    if (!team) { setEnrollError('Please select a valid team.'); return; }
+    if ((teamCounts[team.id] || 0) >= team.capacity) {
+      setEnrollError(`Team "${team.name}" is full (${team.capacity}/${team.capacity}). Please pick another team.`);
+      return;
+    }
     send(cleanEmail, { name: cleanName, kind: role, team_id: team.id, team_name: team.name }, setEnrollError);
   };
 
@@ -219,36 +228,72 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
 
             {/* Team Selection */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                4. Choose Your Team (From the 7 Official Teams)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {TEAMS.map(t => {
-                  const isSelected = selectedTeamId === t.id;
-                  const enrolledCount = teamCounts[t.id] || 0;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setSelectedTeamId(t.id)}
-                      className={`p-3 rounded-xl border-2 text-left transition flex flex-col justify-between ${
-                        isSelected
-                          ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                      }`}
-                    >
-                      <span className="font-bold text-sm block">{t.name}</span>
-                      <span className="text-[11px] text-slate-400 mt-1">{enrolledCount}/{t.capacity} places</span>
-                    </button>
-                  );
-                })}
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  4. Choose Your Team (Click to select)
+                </label>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {totalEnrolled}/{totalCapacity} League places filled
+                </span>
               </div>
+
+              {!selectedTeamId && !allTeamsFull && (
+                <p className="text-xs text-purple-700 bg-purple-50 border border-purple-200 px-3.5 py-1.5 rounded-xl font-medium">
+                  Please click on one of the teams below to select your team.
+                </p>
+              )}
+
+              {allTeamsFull ? (
+                <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 text-amber-900 text-xs sm:text-sm font-medium">
+                  <strong>Notice:</strong> All teams have reached maximum capacity ({totalCapacity}/{totalCapacity} places filled). Please speak with your Captain.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {TEAMS.map(t => {
+                    const isSelected = selectedTeamId === t.id;
+                    const enrolledCount = teamCounts[t.id] || 0;
+                    const isFull = enrolledCount >= t.capacity;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        disabled={isFull}
+                        onClick={() => { setSelectedTeamId(t.id); setEnrollError(''); }}
+                        className={`p-3 rounded-xl border-2 text-left transition flex flex-col justify-between ${
+                          isFull
+                            ? 'border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-60'
+                            : isSelected
+                            ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm ring-2 ring-purple-300'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-bold text-sm block">{t.name}</span>
+                          {isSelected && !isFull && (
+                            <span className="w-4 h-4 rounded-full bg-[#6d28d9] text-white flex items-center justify-center">
+                              <Check size={10} />
+                            </span>
+                          )}
+                          {isFull && (
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">
+                              Full
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400 mt-1">
+                          {enrolledCount}/{t.capacity} places {isFull ? '• Closed' : '• Open'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={sending}
+              disabled={sending || allTeamsFull}
               className="w-full disabled:opacity-60 py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
             >
               <span>{sending ? 'Sending link…' : 'Email Me a Sign-In Link'}</span>

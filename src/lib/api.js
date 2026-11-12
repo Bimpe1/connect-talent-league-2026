@@ -48,7 +48,13 @@ export const sendMagicLink = async ({ email, profile }) => {
       data: profile,
     },
   });
-  fail(error);
+  if (error) {
+    // The database trigger rejects sign-ups for a full team; Supabase reports it generically.
+    if (/database error saving new user/i.test(error.message)) {
+      throw new Error('We could not create your account. The team you chose may have just filled up, so please refresh and pick another team.');
+    }
+    throw error;
+  }
 };
 
 export const signOut = () => supabase.auth.signOut();
