@@ -17,8 +17,11 @@ import {
   fetchCaptains,
   saveCaptain,
   fetchWeeks,
-  saveWeek
+  saveWeek,
+  fetchSchedule,
+  saveSchedule
 } from './services/api';
+import { DEFAULT_SCHEDULE, getChallengeTiming } from './utils/timing';
 
 const CAPTAIN_ACCOUNT = { 
   id: 'c_morgan', 
@@ -28,8 +31,15 @@ const CAPTAIN_ACCOUNT = {
 };
 
 export default function App() {
-  // Current active logged in user (null if not enrolled/signed in)
-  const [currentUser, setCurrentUser] = useState(null);
+  // Current active logged in user (restored from localStorage if remembered)
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ct_current_user_2026');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   const [currentTab, setCurrentTab] = useState('challenges'); // 'challenges', 'leaderboard', 'badges', 'captain'
 
@@ -108,22 +118,59 @@ export default function App() {
     } catch (e) {}
   }, [weeks]);
 
+  // Challenge open/close timing & auto-lock schedule
+  const [schedule, setSchedule] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ct_challenge_schedule_2026');
+      return saved ? JSON.parse(saved) : DEFAULT_SCHEDULE;
+    } catch (e) {
+      return DEFAULT_SCHEDULE;
+    }
+  });
+
+  const timing = getChallengeTiming(schedule);
+
+  const handleUpdateSchedule = (newSchedule) => {
+    setSchedule(newSchedule);
+    try {
+      localStorage.setItem('ct_challenge_schedule_2026', JSON.stringify(newSchedule));
+    } catch (e) {}
+    saveSchedule(newSchedule);
+  };
+
   // Periodic Cloud Sync with Vercel Postgres / Database API
   useEffect(() => {
     let isMounted = true;
 
     async function loadCloudData() {
       try {
-        const [cloudParticipants, cloudSubmissions, cloudCaptains, cloudWeeks] = await Promise.all([
+        const [cloudParticipants, cloudSubmissions, cloudCaptains, cloudWeeks, cloudSchedule] = await Promise.all([
           fetchParticipants(participants),
           fetchSubmissions(submissions),
           fetchCaptains(captains),
-          fetchWeeks(weeks)
+          fetchWeeks(weeks),
+          fetchSchedule(schedule)
         ]);
 
         if (isMounted) {
           if (Array.isArray(cloudParticipants) && cloudParticipants.length > 0) {
-            setParticipants(cloudParticipants);
+            setParticipants(prev => {
+              const map = new Map();
+              prev.forEach(p => map.set(p.id, p));
+              cloudParticipants.forEach(cp => {
+                const local = map.get(cp.id);
+                map.set(cp.id, {
+                  ...local,
+                  ...cp,
+                  email: (cp.email && cp.email.trim()) ? cp.email.trim().toLowerCase() : (local?.email || '')
+                });
+              });
+              const merged = Array.from(map.values());
+              try {
+                localStorage.setItem('ct_participants_2026', JSON.stringify(merged));
+              } catch (e) {}
+              return merged;
+            });
           }
           if (Array.isArray(cloudSubmissions) && cloudSubmissions.length > 0) {
             setSubmissions(cloudSubmissions);
@@ -133,6 +180,9 @@ export default function App() {
           }
           if (Array.isArray(cloudWeeks) && cloudWeeks.length > 0) {
             setWeeks(cloudWeeks);
+          }
+          if (cloudSchedule && typeof cloudSchedule === 'object') {
+            setSchedule(cloudSchedule);
           }
         }
       } catch (err) {
@@ -170,10 +220,11 @@ export default function App() {
   const [securityAlert, setSecurityAlert] = useState(null);
 
   // Participant Enrollment Handler
-  const handleEnrollParticipant = ({ name, role, teamId, teamName }) => {
+  const handleEnrollParticipant = ({ name, email, role, teamId, teamName }) => {
     const newParticipant = {
       id: `p_${Date.now()}`,
       name,
+      email: email || '',
       role,
       teamId,
       teamName,
@@ -186,10 +237,31 @@ export default function App() {
       badges: ["ready_to_begin"]
     };
 
-    setParticipants(prev => [...prev, newParticipant]);
+    setParticipants(prev => {
+      const filtered = prev.filter(p => p.name.trim().toLowerCase() !== name.trim().toLowerCase());
+      const updated = [...filtered, newParticipant];
+      try {
+        localStorage.setItem('ct_participants_2026', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
     saveParticipant(newParticipant);
     setCurrentUser(newParticipant);
     setCurrentTab('challenges');
+  };
+
+  // Update participant email directly
+  const handleUpdateParticipantEmail = (participantId, newEmail) => {
+    const clean = (newEmail || '').trim().toLowerCase();
+    setParticipants(prev => {
+      const updated = prev.map(p => p.id === participantId ? { ...p, email: clean } : p);
+      try {
+        localStorage.setItem('ct_participants_2026', JSON.stringify(updated));
+      } catch (e) {}
+      const target = updated.find(p => p.id === participantId);
+      if (target) saveParticipant(target);
+      return updated;
+    });
   };
 
   // Switch to previously enrolled user
@@ -271,6 +343,14 @@ export default function App() {
   }) => {
     if (!currentUser || currentUser.role === 'captain') {
       triggerSecurityViolation("Only enrolled participants can submit challenge evidence.");
+      return;
+    }
+
+    // Verify if challenge is currently open (in-person attendance is always allowed)
+    if (!isAttendance && !timing.isOpen) {
+      triggerSecurityViolation(
+        `Submissions are currently locked for today (${timing.reason})`
+      );
       return;
     }
 
@@ -540,6 +620,8 @@ const handleAdjustScore = (id, newScore) => {
                 currentUser={currentUser}
                 submissions={submissions}
                 weeks={weeks}
+                schedule={schedule}
+                timing={timing}
                 onSubmitChallenge={handleSubmitChallenge}
               />
             )}
@@ -566,6 +648,10 @@ const handleAdjustScore = (id, newScore) => {
                 submissions={submissions}
                 participants={participants}
                 weeks={weeks}
+                schedule={schedule}
+                timing={timing}
+                onUpdateSchedule={handleUpdateSchedule}
+                onUpdateParticipantEmail={handleUpdateParticipantEmail}
                 onUpdateChallenge={handleUpdateChallenge}
                 onResetChallenges={handleResetChallenges}
                 onApproveSubmission={handleApproveSubmission}

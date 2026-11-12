@@ -101,9 +101,36 @@ export async function ensureTables(sql) {
       );
     `;
 
+    // League Settings Table (Schedule, Timing, Locks)
+    await sql`
+      CREATE TABLE IF NOT EXISTS league_settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value JSONB,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    // Email Notification Logs Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS email_logs (
+        id VARCHAR(100) PRIMARY KEY,
+        type VARCHAR(50),
+        subject VARCHAR(255),
+        recipients JSONB,
+        recipient_count INT,
+        sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(50)
+      );
+    `;
+
     // Ensure is_attendance column exists on submissions
     try {
       await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS is_attendance BOOLEAN DEFAULT FALSE;`;
+    } catch (e) {}
+
+    // Ensure email column exists on participants
+    try {
+      await sql`ALTER TABLE participants ADD COLUMN IF NOT EXISTS email VARCHAR(255);`;
     } catch (e) {}
 
     tablesInitialized = true;

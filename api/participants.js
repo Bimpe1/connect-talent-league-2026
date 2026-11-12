@@ -26,6 +26,7 @@ export default async function handler(req, res) {
         SELECT 
           id, 
           name, 
+          email,
           role, 
           team_id as "teamId", 
           team_name as "teamName", 
@@ -76,11 +77,12 @@ export default async function handler(req, res) {
 
       await sql`
         INSERT INTO participants (
-          id, name, role, team_id, team_name, 
+          id, name, email, role, team_id, team_name, 
           wk1, wk2, wk3, wk4, attendance, badges
         ) VALUES (
           ${p.id},
           ${p.name},
+          ${p.email || ''},
           ${p.role || 'Member'},
           ${p.teamId || ''},
           ${p.teamName || ''},
@@ -93,6 +95,7 @@ export default async function handler(req, res) {
         )
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
+          email = EXCLUDED.email,
           role = EXCLUDED.role,
           team_id = EXCLUDED.team_id,
           team_name = EXCLUDED.team_name,

@@ -20,9 +20,11 @@ import {
   ShieldCheck,
   MapPin,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { WEEKS as DEFAULT_WEEKS } from '../data/curriculum';
+import { getChallengeTiming } from '../utils/timing';
 import VoiceRecorder from './VoiceRecorder';
 import MediaUploader from './MediaUploader';
 import ChallengeMiniLab from './ChallengeMiniLab';
@@ -32,9 +34,12 @@ export default function ParticipantView({
   currentUser, 
   submissions, 
   weeks,
+  schedule,
+  timing,
   onSubmitChallenge,
   onNavigateLeaderboard 
 }) {
+  const currentTiming = timing || getChallengeTiming(schedule);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [submissionText, setSubmissionText] = useState('');
@@ -478,11 +483,40 @@ export default function ParticipantView({
       <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-sm border border-slate-200 space-y-5 sm:space-y-6">
         
         {/* Challenge Header */}
-        <div className="space-y-1.5 border-b border-slate-100 pb-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full">
-              {activeChallenge.day} Challenge · Max {activeChallenge.maxPoints} TP
-            </span>
+        <div className="space-y-2 border-b border-slate-100 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full">
+                {activeChallenge.day} Challenge · Max {activeChallenge.maxPoints} TP
+              </span>
+
+              {/* Timing Status Pill */}
+              <span className={`text-xs font-bold px-3 py-0.5 rounded-full flex items-center gap-1.5 border ${
+                !currentTiming.isOpen
+                  ? 'bg-rose-50 text-rose-800 border-rose-200'
+                  : currentTiming.isClosingSoon
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 animate-pulse'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+              }`}>
+                {!currentTiming.isOpen ? (
+                  <>
+                    <Lock size={12} className="text-rose-600 flex-shrink-0" />
+                    <span>{currentTiming.badgeText}</span>
+                  </>
+                ) : currentTiming.isClosingSoon ? (
+                  <>
+                    <Clock size={12} className="text-amber-600 flex-shrink-0" />
+                    <span>{currentTiming.badgeText}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>{currentTiming.badgeText}</span>
+                  </>
+                )}
+              </span>
+            </div>
+
             {existingSubmission && (
               <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                 <Check size={12} />
@@ -543,6 +577,22 @@ export default function ParticipantView({
             <p className="text-sm sm:text-base text-slate-800 bg-white p-4 rounded-xl border border-emerald-200 leading-relaxed whitespace-pre-wrap font-medium">
               {existingSubmission.submissionText}
             </p>
+          </div>
+        ) : !currentTiming.isOpen ? (
+          <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center space-y-3">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-purple-100 text-[#0a2558] flex items-center justify-center border border-purple-200 shadow-sm">
+              <Lock size={22} className="text-[#6d28d9]" />
+            </div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
+              Submissions Currently Closed
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto font-medium leading-relaxed">
+              {currentTiming.reason} Review the challenge instructions and thinking prompt above to prepare your ideas!
+            </p>
+            <div className="inline-flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs mt-1">
+              <Clock size={13} className="text-[#6d28d9]" />
+              <span>Submission Window: <strong>{currentTiming.openDisplay} – {currentTiming.closeDisplay}</strong></span>
+            </div>
           </div>
         ) : (
           /* Response Form */

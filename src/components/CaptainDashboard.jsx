@@ -15,7 +15,14 @@ import {
   Save,
   RotateCcw,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Unlock,
+  Mail,
+  Bell,
+  Send,
+  Eye,
+  CheckCheck
 } from 'lucide-react';
 
 import {
@@ -23,12 +30,18 @@ import {
   RECOGNITION_BADGES,
   WEEKS as DEFAULT_WEEKS
 } from '../data/curriculum';
+import { sendChallengeNotification } from '../services/api';
+import { getChallengeTiming, DEFAULT_SCHEDULE, formatTimeDisplay } from '../utils/timing';
 
 export default function CaptainDashboard({
   currentUser,
   submissions,
-  participants,
+  participants = [],
   weeks,
+  schedule,
+  timing,
+  onUpdateSchedule,
+  onUpdateParticipantEmail,
   onUpdateChallenge,
   onResetChallenges,
   onApproveSubmission,
@@ -37,9 +50,21 @@ export default function CaptainDashboard({
   onAwardBadge,
   onOpenWhatsAppModal
 }) {
+  const currentTiming = timing || getChallengeTiming(schedule);
   const [section, setSection] = useState('queue');
   const [teamFilter, setTeamFilter] = useState('all');
   const [scoreDrafts, setScoreDrafts] = useState({});
+
+  // Timing & Email Notification States
+  const [openTimeInput, setOpenTimeInput] = useState(schedule?.openTime || '09:00');
+  const [closeTimeInput, setCloseTimeInput] = useState(schedule?.closeTime || '21:00');
+  const [scheduleSaveMsg, setScheduleSaveMsg] = useState('');
+  const [emailStatusMsg, setEmailStatusMsg] = useState('');
+  const [emailStatusType, setEmailStatusType] = useState('success');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailPreviewType, setEmailPreviewType] = useState(null);
+  const [editingEmailId, setEditingEmailId] = useState(null);
+  const [editingEmailValue, setEditingEmailValue] = useState('');
 
   // Challenge Editor Form State
   const [editWeekNum, setEditWeekNum] = useState(1);
@@ -114,6 +139,69 @@ export default function CaptainDashboard({
     setTimeout(() => setSaveSuccessMsg(''), 4000);
   };
 
+  // Save Timing Schedule Settings
+  const handleSaveTimingConfig = (e) => {
+    e?.preventDefault();
+    const updated = {
+      openTime: openTimeInput,
+      closeTime: closeTimeInput
+    };
+    onUpdateSchedule(updated);
+    setScheduleSaveMsg(`Schedule saved! Challenges open daily at ${formatTimeDisplay(openTimeInput)} and lock at ${formatTimeDisplay(closeTimeInput)}.`);
+    setTimeout(() => setScheduleSaveMsg(''), 4500);
+  };
+
+  // Trigger Email Notification Broadcast
+  const handleSendNotificationBroadcast = async (notifType) => {
+    setIsSendingEmail(true);
+    setEmailStatusMsg('');
+    setEmailStatusType('loading');
+
+    // Current week and active challenge
+    const currentWeekData = (weeks || DEFAULT_WEEKS).find(w => w.weekNumber === editWeekNum) || (weeks || DEFAULT_WEEKS)[0];
+    const targetChallenge = currentWeekData.challenges[editDayIndex] || currentWeekData.challenges[0] || {};
+
+    // Filter recipients with emails
+    let targetParticipants = participants.filter(p => p.email && /\S+@\S+\.\S+/.test(p.email));
+
+    if (notifType === 'closing_soon') {
+      targetParticipants = targetParticipants.filter(p => {
+        return !submissions.some(s => s.participantId === p.id && s.challengeTitle === targetChallenge.title);
+      });
+    }
+
+    if (targetParticipants.length === 0) {
+      setEmailStatusType('error');
+      setEmailStatusMsg(
+        notifType === 'closing_soon'
+          ? 'All participants with registered emails have already submitted! No reminders needed.'
+          : 'No participants with registered emails found. Participants must enter their email when enrolling.'
+      );
+      setIsSendingEmail(false);
+      return;
+    }
+
+    try {
+      const res = await sendChallengeNotification({
+        type: notifType,
+        challengeTitle: targetChallenge.title || "Daily Challenge",
+        challengeDay: targetChallenge.day || "Today",
+        instructions: targetChallenge.instructions || "",
+        openTime: schedule?.openTime || "09:00",
+        closeTime: schedule?.closeTime || "21:00",
+        recipients: targetParticipants.map(p => ({ name: p.name, email: p.email }))
+      });
+
+      setEmailStatusType('success');
+      setEmailStatusMsg(res.message || `Notification sent to ${targetParticipants.length} participant(s)!`);
+    } catch (err) {
+      setEmailStatusType('error');
+      setEmailStatusMsg(`Notification failed: ${err.message}`);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   const pendingSubmissions = submissions.filter(
     s => s.status === 'pending'
   );
@@ -174,6 +262,18 @@ export default function CaptainDashboard({
         </button>
 
         <button
+          onClick={() => setSection('timing')}
+          className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border ${
+            section === 'timing'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+          }`}
+        >
+          <Clock size={14} />
+          <span className="truncate">Timing & Alerts</span>
+        </button>
+
+        <button
           onClick={() => setSection('manage_challenges')}
           className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border ${
             section === 'manage_challenges'
@@ -209,6 +309,313 @@ export default function CaptainDashboard({
           <span className="truncate">Checklist</span>
         </button>
       </div>
+
+      {/* ============================================================== */}
+      {/* SECTION: TIMING & EMAIL NOTIFICATIONS                          */}
+      {/* ============================================================== */}
+      {section === 'timing' && (
+        <div className="space-y-6">
+
+          {/* Feedback Toast */}
+          {scheduleSaveMsg && (
+            <div className="p-3.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+              <Check size={16} className="text-emerald-600" />
+              <span>{scheduleSaveMsg}</span>
+            </div>
+          )}
+
+          {/* Card 1: Challenge Open & Lock Controls */}
+          <div className="bg-white rounded-2xl p-4 sm:p-7 shadow-sm border border-slate-200 space-y-5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 font-heading">
+                    Challenge Timing & Lock Controls
+                  </h3>
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                    currentTiming.isOpen 
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                      : 'bg-rose-50 text-rose-800 border-rose-300'
+                  }`}>
+                    {currentTiming.isOpen ? '🟢 Currently Open' : '🔒 Currently Locked'}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                  Set the daily opening and closing hours. To unlock or lock immediately, simply change the open or close time manually below.
+                </p>
+              </div>
+
+              {/* Quick Status Pill */}
+              <div className="text-left sm:text-right">
+                <span className="text-xs font-bold text-[#0a2558] block">
+                  Status: {currentTiming.badgeText}
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  {currentTiming.reason}
+                </span>
+              </div>
+            </div>
+
+            {/* Schedule Configuration Form */}
+            <form onSubmit={handleSaveTimingConfig} className="space-y-4 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Daily Challenge Open Time:
+                  </label>
+                  <input
+                    type="time"
+                    value={openTimeInput}
+                    onChange={e => setOpenTimeInput(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 focus:border-[#6d28d9] focus:outline-none bg-white"
+                    required
+                  />
+                  <span className="text-[11px] text-slate-500 block">
+                    Challenges unlock for submissions at this time each morning (e.g. {formatTimeDisplay(openTimeInput)}).
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Daily Challenge Close Time:
+                  </label>
+                  <input
+                    type="time"
+                    value={closeTimeInput}
+                    onChange={e => setCloseTimeInput(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 focus:border-[#6d28d9] focus:outline-none bg-white"
+                    required
+                  />
+                  <span className="text-[11px] text-slate-500 block">
+                    Challenges lock for submissions at this time each evening (e.g. {formatTimeDisplay(closeTimeInput)}).
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-purple-50/60 border border-purple-100 rounded-xl text-xs text-slate-600 flex items-center gap-2">
+                <Clock size={15} className="text-[#6d28d9] flex-shrink-0" />
+                <span>
+                  <strong>Manual Lock / Unlock:</strong> To open immediately, set Open Time to earlier than now. To lock immediately, set Close Time to earlier than now.
+                </span>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 flex items-center gap-1.5"
+                >
+                  <Save size={15} />
+                  <span>Save Timing Schedule</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Card 2: Email Broadcast & Notification Center */}
+          <div className="bg-white rounded-2xl p-4 sm:p-7 shadow-sm border border-slate-200 space-y-5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 font-heading">
+                    Participant Email Broadcast Center
+                  </h3>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200">
+                    {participants.filter(p => p.email).length} / {participants.length} Registered Emails
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+                  Send challenge opening alerts and 1-hour closing reminders to all registered participant email addresses.
+                </p>
+              </div>
+            </div>
+
+            {/* Email Status Notice */}
+            {emailStatusMsg && (
+              <div className={`p-4 rounded-xl border text-xs sm:text-sm font-medium flex items-center gap-2.5 ${
+                emailStatusType === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : emailStatusType === 'loading'
+                  ? 'bg-purple-50 text-purple-800 border-purple-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}>
+                {emailStatusType === 'loading' ? (
+                  <Sparkles size={16} className="text-[#6d28d9] animate-spin" />
+                ) : emailStatusType === 'success' ? (
+                  <CheckCheck size={18} className="text-emerald-600 flex-shrink-0" />
+                ) : (
+                  <AlertCircle size={18} className="text-rose-600 flex-shrink-0" />
+                )}
+                <span>{emailStatusMsg}</span>
+              </div>
+            )}
+
+            {/* Notification Triggers */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              {/* Trigger 1: Challenge Open Announcement */}
+              <div className="border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 bg-purple-50/20 flex flex-col justify-between">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-xl bg-purple-100 text-[#0a2558] flex items-center justify-center font-bold">
+                      <Bell size={16} className="text-[#6d28d9]" />
+                    </span>
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                      "Challenge Now Open" Alert
+                    </h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Notifies participants that today's challenge is live with instructions, open until {formatTimeDisplay(schedule?.closeTime || '21:00')}, and link to submit evidence.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isSendingEmail || participants.filter(p => p.email).length === 0}
+                    onClick={() => handleSendNotificationBroadcast('challenge_opened')}
+                    className="flex-1 py-2.5 px-4 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    <Send size={14} />
+                    <span>Send Open Alert ({participants.filter(p => p.email).length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Trigger 2: 1-Hour Closing Reminder */}
+              <div className="border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 bg-amber-50/20 flex flex-col justify-between">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
+                      <Clock size={16} className="text-amber-700" />
+                    </span>
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                      "Closing in 1 Hour" Reminder
+                    </h4>
+                  </div>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Urgent reminder sent to participants who haven't submitted yet, warning that submissions close in 1 hour at {formatTimeDisplay(schedule?.closeTime || '21:00')}.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isSendingEmail || participants.filter(p => p.email).length === 0}
+                    onClick={() => handleSendNotificationBroadcast('closing_soon')}
+                    className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    <Clock size={14} />
+                    <span>Send 1-Hour Reminder</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Registered Email List Preview with Inline Editor */}
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                  Enrolled Participants & Email Delivery Status:
+                </span>
+                <span className="text-xs font-semibold text-purple-800">
+                  {participants.filter(p => p.email && p.email.trim()).length} of {participants.length} ready for emails
+                </span>
+              </div>
+
+              {participants.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pt-1">
+                  {participants.map(p => {
+                    const hasEmail = !!(p.email && p.email.trim());
+                    const isEditing = editingEmailId === p.id;
+
+                    return (
+                      <div
+                        key={p.id}
+                        className={`p-3 rounded-xl border text-xs transition flex flex-col justify-between gap-2 ${
+                          hasEmail
+                            ? 'bg-white border-slate-200 shadow-2xs'
+                            : 'bg-amber-50/70 border-amber-200'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <span className="font-bold text-slate-900 block">{p.name}</span>
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              {p.teamName || 'No Team'} · {p.role || 'Learner'}
+                            </span>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            hasEmail
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-200 text-amber-900'
+                          }`}>
+                            {hasEmail ? 'Email Set' : 'No Email'}
+                          </span>
+                        </div>
+
+                        {isEditing ? (
+                          <div className="flex items-center gap-1.5 pt-1">
+                            <input
+                              type="email"
+                              placeholder="e.g. name@example.com"
+                              value={editingEmailValue}
+                              onChange={e => setEditingEmailValue(e.target.value)}
+                              className="flex-1 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-medium focus:border-purple-600 focus:outline-none"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onUpdateParticipantEmail) {
+                                  onUpdateParticipantEmail(p.id, editingEmailValue);
+                                }
+                                setEditingEmailId(null);
+                              }}
+                              className="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-lg text-xs"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingEmailId(null)}
+                              className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded-lg text-xs"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+                            <span className="text-slate-600 truncate max-w-[200px] font-mono text-[11px]">
+                              {hasEmail ? p.email : 'No email registered'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingEmailId(p.id);
+                                setEditingEmailValue(p.email || '');
+                              }}
+                              className="text-[11px] font-bold text-purple-700 hover:text-purple-900 underline ml-2 flex-shrink-0"
+                            >
+                              {hasEmail ? 'Edit Email' : '+ Add Email'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">
+                  No participants enrolled yet. Enrolled participants will appear here automatically.
+                </p>
+              )}
+            </div>
+
+          </div>
+
+        </div>
+      )}
 
       {/* SECTION 1: SET & EDIT CHALLENGES                               */}
 

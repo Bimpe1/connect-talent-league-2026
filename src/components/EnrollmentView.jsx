@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check } from 'lucide-react';
+import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail } from 'lucide-react';
 import { TEAMS } from '../data/curriculum';
 
 export default function EnrollmentView({ 
@@ -12,6 +12,7 @@ export default function EnrollmentView({
 
   // Enrollment fields - NO automatic team pre-selection
   const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [enrollError, setEnrollError] = useState('');
@@ -70,8 +71,19 @@ export default function EnrollmentView({
       return;
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setEnrollError('Please enter your email address to receive challenge opening alerts & 1-hour closing reminders.');
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(cleanEmail)) {
+      setEnrollError('Please enter a valid email address (e.g. yourname@example.com).');
+      return;
+    }
+
     onEnroll({
       name: cleanName,
+      email: cleanEmail,
       role,
       teamId: team.id,
       teamName: team.name,
@@ -203,10 +215,36 @@ export default function EnrollmentView({
               </span>
             </div>
 
+            {/* Email Address for Notifications */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  2. Email Address
+                </label>
+                <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                  Daily Challenge Alerts
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="email"
+                  placeholder="e.g. jordan.t@example.com"
+                  value={email}
+                  onChange={e => { setEmail(e.target.value); setEnrollError(''); }}
+                  className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                  required
+                />
+                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+              <span className="text-xs text-slate-500 block font-normal">
+                Receive notifications when challenges open and a 1-hour closing reminder so you never miss out on points.
+              </span>
+            </div>
+
             {/* Role Selection */}
             <div className="space-y-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                2. Your Role
+                3. Your Role
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -246,7 +284,7 @@ export default function EnrollmentView({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  3. Choose Your Team (Click to select)
+                  4. Choose Your Team (Click to select)
                 </label>
                 <span className="text-[11px] font-semibold text-slate-500">
                   {existingParticipants.length}/40 League places filled
@@ -369,6 +407,30 @@ export default function EnrollmentView({
                 Case-insensitive (e.g. "jordan t" or "Jordan T.")
               </span>
             </div>
+
+            {/* Quick Profile Chips for Easy One-Click Sign In */}
+            {existingParticipants.length > 0 && (
+              <div className="space-y-2 pt-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
+                  Or click your registered profile:
+                </span>
+                <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
+                  {existingParticipants.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => onSelectExistingUser(p)}
+                      className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-[#0a2558] hover:text-[#6d28d9] rounded-xl text-xs font-bold border border-purple-200 transition flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <span>{p.name}</span>
+                      <span className="text-[10px] text-purple-600 bg-white px-1.5 py-0.5 rounded-md font-semibold">
+                        {p.teamName}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Sign In Button */}
             <button
