@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail, Clock, UserCheck, ShieldCheck } from 'lucide-react';
+import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail, Clock, UserCheck, ShieldCheck, Lock, Eye, EyeOff } from 'lucide-react';
 import { TEAMS } from '../data/curriculum';
+import { hashPassword, verifyPassword } from '../utils/security';
 
 export default function EnrollmentView({ 
   onEnroll, 
@@ -10,9 +11,13 @@ export default function EnrollmentView({
 }) {
   const [tab, setTab] = useState('enroll'); // 'enroll' or 'signin'
 
-  // Enrollment fields - NO automatic team pre-selection
+  // Enrollment fields
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [enrollError, setEnrollError] = useState('');
@@ -24,11 +29,14 @@ export default function EnrollmentView({
   );
 
   // Sign in fields
-  const [signInName, setSignInName] = useState('');
+  const [signInIdentifier, setSignInIdentifier] = useState('');
+  const [signInPassword, setSignInPassword] = useState('');
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [signInError, setSignInError] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   // Handle New Participant Enrollment
-  const handleEnrollSubmit = (e) => {
+  const handleEnrollSubmit = async (e) => {
     e.preventDefault();
     setEnrollError('');
 
@@ -38,21 +46,46 @@ export default function EnrollmentView({
       return;
     }
 
-    // Require explicit team selection
-    if (!selectedTeamId) {
-      setEnrollError('Please select a team from the available teams below to continue.');
+    // Email validation
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
+      setEnrollError('Please enter a valid email address. Your email is used to securely sign in.');
       return;
     }
 
-    // Check for duplicate name (case-insensitive)
+    // Check duplicate email
+    const emailInUse = existingParticipants.some(
+      p => p.email && p.email.trim().toLowerCase() === cleanEmail
+    );
+    if (emailInUse) {
+      setEnrollError(`An account with the email "${cleanEmail}" is already enrolled. Please switch to "Returning Sign-In" to log in.`);
+      return;
+    }
+
+    // Check duplicate name
     const isDuplicate = existingParticipants.some(
       p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
-
     if (isDuplicate) {
       setEnrollError(
-        `"${cleanName}" is already enrolled. If this is you, click "Sign In" above. If you are another participant with the same name, please add an extra initial or number (e.g. ${cleanName} 2).`
+        `"${cleanName}" is already enrolled. If this is you, click "Returning Sign-In" above. If you are another participant with the same name, please add an extra initial (e.g. ${cleanName} 2).`
       );
+      return;
+    }
+
+    // Password validation
+    if (!password || password.length < 6) {
+      setEnrollError('Please create a password of at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setEnrollError('Passwords do not match. Please re-enter your password confirmation.');
+      return;
+    }
+
+    // Require explicit team selection
+    if (!selectedTeamId) {
+      setEnrollError('Please select a team from the available teams below to continue.');
       return;
     }
 
@@ -72,15 +105,12 @@ export default function EnrollmentView({
       return;
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    if (cleanEmail && !/\S+@\S+\.\S+/.test(cleanEmail)) {
-      setEnrollError('Please enter a valid email address (e.g. yourname@example.com) or leave it blank.');
-      return;
-    }
+    const passwordHash = await hashPassword(password);
 
     const newPlayer = onEnroll({
       name: cleanName,
-      email: cleanEmail || '',
+      email: cleanEmail,
+      passwordHash,
       role,
       teamId: team.id,
       teamName: team.name,
@@ -91,37 +121,68 @@ export default function EnrollmentView({
     }
   };
 
-  // Handle Returning Participant Sign In
-  const handleSignInSubmit = (e) => {
+  // Handle Returning Participant Sign In with Email & Password
+  const handleSignInSubmit = async (e) => {
     e.preventDefault();
     setSignInError('');
 
-    const cleanName = signInName.trim();
-    if (!cleanName) {
-      setSignInError('Please enter your enrolled display name.');
+    const cleanIdentifier = signInIdentifier.trim().toLowerCase();
+    if (!cleanIdentifier) {
+      setSignInError('Please enter your registered email address or display name.');
       return;
     }
 
-    // Lookup participant
-    const found = existingParticipants.find(
-      p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
-    );
+    if (!signInPassword) {
+      setSignInError('Please enter your account password.');
+      return;
+    }
 
-    if (!found) {
-      setSignInError(
-        `No enrolled participant found matching "${cleanName}". Please verify the spelling or click "Enroll as New" to register.`
+    setIsSigningIn(true);
+
+    try {
+      // Find participant by email first, or by display name
+      const found = existingParticipants.find(
+        p => (p.email && p.email.trim().toLowerCase() === cleanIdentifier) ||
+             (p.name && p.name.trim().toLowerCase() === cleanIdentifier)
       );
-      return;
-    }
 
-    if (found.isApproved === false || found.status === 'pending') {
-      setSignInError(
-        `⏳ Hi ${found.name}, your registration for Team ${found.teamName || 'League'} is currently pending Captain approval. Once Coach Morgan or your Team Captain approves it, you can log in immediately!`
-      );
-      return;
-    }
+      if (!found) {
+        setSignInError(
+          `No enrolled player found matching "${signInIdentifier}". Please verify the email or click "Enroll as New" to create an account.`
+        );
+        setIsSigningIn(false);
+        return;
+      }
 
-    onSelectExistingUser(found);
+      // Check approval status
+      if (found.isApproved === false || found.status === 'pending') {
+        setSignInError(
+          `⏳ Hi ${found.name}, your registration for Team ${found.teamName || 'League'} is currently pending Captain approval. Once Coach Morgan or your Team Captain approves it, you can log in immediately!`
+        );
+        setIsSigningIn(false);
+        return;
+      }
+
+      // If account has a password set, verify it
+      if (found.passwordHash) {
+        const isMatch = await verifyPassword(signInPassword, found.passwordHash);
+        if (!isMatch) {
+          setSignInError('Incorrect password. Please verify your password and try again.');
+          setIsSigningIn(false);
+          return;
+        }
+      } else {
+        // If legacy account had no password hash, save this password as their account password
+        const newHash = await hashPassword(signInPassword);
+        found.passwordHash = newHash;
+      }
+
+      onSelectExistingUser(found);
+    } catch (err) {
+      setSignInError(`Sign-in error: ${err.message}`);
+    } finally {
+      setIsSigningIn(false);
+    }
   };
 
   return (
@@ -300,35 +361,87 @@ export default function EnrollmentView({
               </span>
             </div>
 
-            {/* Email Address for Notifications */}
+            {/* Email Address for Login & Notifications */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  2. Email Address <span className="text-slate-400 font-normal normal-case">(Optional)</span>
+                  2. Email Address
                 </label>
                 <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                  Optional Contact
+                  Account Login
                 </span>
               </div>
               <div className="relative">
                 <input
                   type="email"
-                  placeholder="e.g. jordan.t@example.com (optional)"
+                  placeholder="e.g. jordan.t@example.com"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setEnrollError(''); }}
                   className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                  required
                 />
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
               <span className="text-xs text-slate-500 block font-normal">
-                Optional: Enter an email address to receive challenge updates and league reminders.
+                Your email is used to securely sign in to your league account and receive challenge reminders.
               </span>
+            </div>
+
+            {/* Password Creation */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  3. Create Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Min 6 characters"
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); setEnrollError(''); }}
+                    className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-11 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                    required
+                  />
+                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  4. Confirm Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-type password"
+                    value={confirmPassword}
+                    onChange={e => { setConfirmPassword(e.target.value); setEnrollError(''); }}
+                    className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-11 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                    required
+                  />
+                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Role Selection */}
             <div className="space-y-2">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                3. Your Role
+                5. Your Role
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -368,7 +481,7 @@ export default function EnrollmentView({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  4. Choose Your Team (Click to select)
+                  6. Choose Your Team (Click to select)
                 </label>
                 <span className="text-[11px] font-semibold text-slate-500">
                   {existingParticipants.length}/40 League places filled
@@ -440,7 +553,7 @@ export default function EnrollmentView({
               disabled={allTeamsFull}
               className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>{allTeamsFull ? 'League is Full' : 'Enroll & Start League'}</span>
+              <span>{allTeamsFull ? 'League is Full' : 'Complete Registration & Submit for Review'}</span>
               {!allTeamsFull && <ArrowRight size={18} />}
             </button>
           </form>
@@ -450,10 +563,10 @@ export default function EnrollmentView({
         {/* TAB 2: RETURNING PARTICIPANT SIGN IN                     */}
         {/* ======================================================== */}
         {tab === 'signin' && (
-          <form onSubmit={handleSignInSubmit} className="space-y-6">
+          <form onSubmit={handleSignInSubmit} className="space-y-5">
             
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-              Enter the approved display name you used when you enrolled to access your daily challenges, submissions, and badges.
+              Sign in with your registered <strong>email address</strong> (or display name) and <strong>password</strong> to access your daily challenges, submissions, and points.
             </div>
 
             {/* Error Notification */}
@@ -473,32 +586,59 @@ export default function EnrollmentView({
               </div>
             )}
 
-            {/* Display Name Input */}
-            <div className="space-y-2">
+            {/* Email or Display Name Input */}
+            <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Your Enrolled Display Name
+                Email Address or Display Name
               </label>
-              <input
-                type="text"
-                placeholder="e.g. Jordan T."
-                value={signInName}
-                onChange={e => { setSignInName(e.target.value); setSignInError(''); }}
-                className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
-                required
-                autoFocus
-              />
-              <span className="text-xs text-slate-400 block font-normal">
-                Case-insensitive (e.g. "jordan t" or "Jordan T.")
-              </span>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="e.g. jordan.t@example.com or Jordan T."
+                  value={signInIdentifier}
+                  onChange={e => { setSignInIdentifier(e.target.value); setSignInError(''); }}
+                  className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                  required
+                  autoFocus
+                />
+                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
             </div>
 
-            {/* Quick Profile Chips for Easy One-Click Sign In */}
+            {/* Password Input */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Password
+                </label>
+              </div>
+              <div className="relative">
+                <input
+                  type={showSignInPassword ? "text" : "password"}
+                  placeholder="Enter your account password"
+                  value={signInPassword}
+                  onChange={e => { setSignInPassword(e.target.value); setSignInError(''); }}
+                  className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-11 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                  required
+                />
+                <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <button
+                  type="button"
+                  onClick={() => setShowSignInPassword(!showSignInPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  {showSignInPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Profile Autofill (fills in email without logging in) */}
             {existingParticipants.length > 0 && (
-              <div className="space-y-2 pt-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  Or click your registered profile:
+              <div className="space-y-2 pt-1 border-t border-slate-100">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Select your profile to auto-fill email:
                 </span>
-                <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
+                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                   {existingParticipants.map(p => {
                     const isPending = p.isApproved === false || p.status === 'pending';
                     return (
@@ -506,26 +646,17 @@ export default function EnrollmentView({
                         key={p.id}
                         type="button"
                         onClick={() => {
-                          if (isPending) {
-                            setSignInError(
-                              `⏳ Hi ${p.name}, your registration for Team ${p.teamName || 'League'} is currently pending Captain approval. Once Coach Morgan or your Team Captain approves it, you can log in immediately!`
-                            );
-                          } else {
-                            onSelectExistingUser(p);
-                          }
+                          setSignInIdentifier(p.email || p.name);
+                          setSignInError('');
                         }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 shadow-2xs ${
-                          isPending
-                            ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
-                            : 'bg-purple-50 hover:bg-purple-100 text-[#0a2558] hover:text-[#6d28d9] border-purple-200'
-                        }`}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-purple-100 hover:text-purple-900 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 transition flex items-center gap-1.5 shadow-2xs"
                       >
                         <span>{p.name}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${
-                          isPending ? 'bg-amber-200/80 text-amber-950' : 'bg-white text-purple-600'
-                        }`}>
-                          {isPending ? '⏳ Pending Approval' : p.teamName}
-                        </span>
+                        {isPending && (
+                          <span className="text-[10px] text-amber-700 bg-amber-100 px-1 rounded font-bold">
+                            Pending
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -536,10 +667,11 @@ export default function EnrollmentView({
             {/* Sign In Button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
+              disabled={isSigningIn}
+              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95 disabled:opacity-50"
             >
               <LogIn size={18} />
-              <span>Sign In to My Account</span>
+              <span>{isSigningIn ? 'Signing in...' : 'Sign In with Password'}</span>
             </button>
           </form>
         )}

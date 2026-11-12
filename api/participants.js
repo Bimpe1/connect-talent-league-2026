@@ -38,6 +38,7 @@ export default async function handler(req, res) {
           badges, 
           is_approved as "isApproved",
           status,
+          password_hash as "passwordHash",
           created_at as "createdAt"
         FROM participants
         ORDER BY created_at ASC;
@@ -79,12 +80,13 @@ export default async function handler(req, res) {
 
       const isApprovedVal = p.isApproved !== undefined ? p.isApproved : false;
       const statusVal = p.status || (isApprovedVal ? 'approved' : 'pending');
+      const passwordHashVal = p.passwordHash || p.password_hash || '';
 
       await sql`
         INSERT INTO participants (
           id, name, email, role, team_id, team_name, 
           wk1, wk2, wk3, wk4, attendance, badges,
-          is_approved, status
+          is_approved, status, password_hash
         ) VALUES (
           ${p.id},
           ${p.name},
@@ -99,7 +101,8 @@ export default async function handler(req, res) {
           ${JSON.stringify(p.attendance || {})},
           ${JSON.stringify(p.badges || [])},
           ${isApprovedVal},
-          ${statusVal}
+          ${statusVal},
+          ${passwordHashVal}
         )
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
@@ -114,7 +117,8 @@ export default async function handler(req, res) {
           attendance = EXCLUDED.attendance,
           badges = EXCLUDED.badges,
           is_approved = EXCLUDED.is_approved,
-          status = EXCLUDED.status;
+          status = EXCLUDED.status,
+          password_hash = COALESCE(NULLIF(EXCLUDED.password_hash, ''), participants.password_hash);
       `;
 
       return res.status(200).json({ success: true, participant: p });

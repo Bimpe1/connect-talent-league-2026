@@ -21,6 +21,7 @@ export async function fetchParticipants(fallback = []) {
           ...local,
           ...p,
           email: (p.email && p.email.trim()) ? p.email.trim().toLowerCase() : (local?.email || ''),
+          passwordHash: p.passwordHash || local?.passwordHash || '',
           isApproved: p.isApproved !== undefined ? p.isApproved : (local?.isApproved !== undefined ? local.isApproved : true),
           status: p.status || local?.status || (p.isApproved ? 'approved' : 'pending')
         });

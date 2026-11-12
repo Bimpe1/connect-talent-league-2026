@@ -170,6 +170,7 @@ export default function App() {
                   ...local,
                   ...cp,
                   email: (cp.email && cp.email.trim()) ? cp.email.trim().toLowerCase() : (local?.email || ''),
+                  passwordHash: cp.passwordHash || local?.passwordHash || '',
                   isApproved: cp.isApproved !== undefined ? cp.isApproved : (local?.isApproved !== undefined ? local.isApproved : true),
                   status: cp.status || local?.status || (cp.isApproved ? 'approved' : 'pending')
                 });
@@ -229,11 +230,12 @@ export default function App() {
   const [securityAlert, setSecurityAlert] = useState(null);
 
   // Participant Enrollment Handler
-  const handleEnrollParticipant = ({ name, email, role, teamId, teamName }) => {
+  const handleEnrollParticipant = ({ name, email, passwordHash, role, teamId, teamName }) => {
     const newParticipant = {
       id: `p_${Date.now()}`,
       name,
       email: email || '',
+      passwordHash: passwordHash || '',
       role,
       teamId,
       teamName,

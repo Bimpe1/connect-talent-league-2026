@@ -139,6 +139,11 @@ export async function ensureTables(sql) {
       await sql`ALTER TABLE participants ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'approved';`;
     } catch (e) {}
 
+    // Ensure password_hash column exists on participants
+    try {
+      await sql`ALTER TABLE participants ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);`;
+    } catch (e) {}
+
     tablesInitialized = true;
   } catch (err) {
     console.error("Failed to ensure database tables:", err);
