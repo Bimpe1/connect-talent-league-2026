@@ -578,7 +578,7 @@ const handleAdjustScore = (id, newScore) => {
     setLoginError('');
 
     if (captainPasscode !== 'CAPTAIN2026') {
-      setLoginError('Invalid Passkey. Use CAPTAIN2026 for facilitator access.');
+      setLoginError('Invalid passkey. Please check your credentials or contact the coordinator.');
       return;
     }
 
@@ -768,12 +768,6 @@ const handleAdjustScore = (id, newScore) => {
               </button>
             </div>
 
-            <p className="text-xs text-slate-500 font-medium">
-              {captainModalMode === 'signin'
-                ? 'Enter your registered Captain name and passkey to access your dashboard.'
-                : 'Register your Captain name and facilitator passkey (CAPTAIN2026).'}
-            </p>
-
             <form onSubmit={handleCaptainLoginSubmit} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
@@ -792,11 +786,11 @@ const handleAdjustScore = (id, newScore) => {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Facilitator Passkey
+                  Passkey
                 </label>
                 <input
                   type="password"
-                  placeholder="Passkey (CAPTAIN2026)"
+                  placeholder="Enter passkey"
                   value={captainPasscode}
                   onChange={(e) => { setCaptainPasscode(e.target.value); setLoginError(''); }}
                   className="w-full border-2 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none"
