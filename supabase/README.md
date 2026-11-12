@@ -3,8 +3,8 @@
 1. Create a project at supabase.com (free tier is fine).
 2. **SQL Editor -> New query**, paste `supabase/schema.sql`, Run.
 3. **Project Settings -> API**: copy the Project URL and `anon` public key into `.env.local`
-   (see `.env.example`). Add the same two variables in Netlify/Vercel for deploys.
-4. **Authentication -> URL Configuration**: set *Site URL* to your deployed URL and add
+   (see `.env.example`). Add the same two variables in Vercel (Project Settings -> Environment Variables).
+4. **Authentication -> URL Configuration**: set *Site URL* to your Vercel URL and add it (plus `http://localhost:5173`) to *Redirect URLs* so magic links land back in the app. Vercel preview URLs need adding too if you use them (e.g. `https://*-your-team.vercel.app/**`).
    `http://localhost:5173` to *Redirect URLs* so magic links land back in the app.
 5. **Authentication -> Providers -> Email**: keep "Enable Email provider" on. Passwords are not used.
 6. **Authentication -> SMTP Settings** (recommended): plug in your SMTP provider (Resend, Brevo, ...).

@@ -38,6 +38,8 @@ CI (`.github/workflows/ci.yml`) runs lint, tests and a build on every push.
 Emails are collected with consent, visible only to captains (RLS), never included in the leaderboard,
 and should be deleted after the programme (see `supabase/README.md`).
 
-## Deploying
-`netlify.toml` and `vercel.json` both provide the SPA fallback. Set `VITE_SUPABASE_URL` and
-`VITE_SUPABASE_ANON_KEY` in your host's environment settings.
+## Deploying (Vercel)
+`vercel.json` provides the SPA fallback (all routes serve `index.html`). In Vercel, set
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` under Project Settings -> Environment Variables
+(then redeploy). Add your Vercel URL to Supabase -> Authentication -> URL Configuration
+(Site URL and Redirect URLs) so magic links return to the deployed app.
