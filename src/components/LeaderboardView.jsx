@@ -84,7 +84,7 @@ export default function LeaderboardView({ participants }) {
 
       {/* Content */}
       {activeTab === 'teams' ? (
-        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 space-y-4">
+        <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-sm border border-slate-200 space-y-4">
           <div className="divide-y divide-slate-200">
             {sortedTeams.map((team, idx) => (
               <div key={team.id} className="py-4 flex items-center justify-between gap-4 first:pt-0 last:pb-0">
@@ -111,7 +111,7 @@ export default function LeaderboardView({ participants }) {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 space-y-4">
+        <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-sm border border-slate-200 space-y-4">
           {sortedIndividuals.length > 0 ? (
             <div className="divide-y divide-slate-200">
               {sortedIndividuals.map((p, idx) => (
