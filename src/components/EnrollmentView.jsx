@@ -72,18 +72,14 @@ export default function EnrollmentView({
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
-      setEnrollError('Please enter your email address to receive challenge opening alerts & 1-hour closing reminders.');
-      return;
-    }
-    if (!/\S+@\S+\.\S+/.test(cleanEmail)) {
-      setEnrollError('Please enter a valid email address (e.g. yourname@example.com).');
+    if (cleanEmail && !/\S+@\S+\.\S+/.test(cleanEmail)) {
+      setEnrollError('Please enter a valid email address (e.g. yourname@example.com) or leave it blank.');
       return;
     }
 
     onEnroll({
       name: cleanName,
-      email: cleanEmail,
+      email: cleanEmail || '',
       role,
       teamId: team.id,
       teamName: team.name,
@@ -219,25 +215,24 @@ export default function EnrollmentView({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  2. Email Address
+                  2. Email Address <span className="text-slate-400 font-normal normal-case">(Optional)</span>
                 </label>
                 <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                  Daily Challenge Alerts
+                  Optional Contact
                 </span>
               </div>
               <div className="relative">
                 <input
                   type="email"
-                  placeholder="e.g. jordan.t@example.com"
+                  placeholder="e.g. jordan.t@example.com (optional)"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setEnrollError(''); }}
                   className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
-                  required
                 />
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
               <span className="text-xs text-slate-500 block font-normal">
-                Receive notifications when challenges open and a 1-hour closing reminder so you never miss out on points.
+                Optional: Enter an email address to receive challenge updates and league reminders.
               </span>
             </div>
 

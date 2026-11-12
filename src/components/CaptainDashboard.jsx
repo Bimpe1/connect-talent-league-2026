@@ -411,115 +411,32 @@ export default function CaptainDashboard({
             </form>
           </div>
 
-          {/* Card 2: Email Broadcast & Notification Center */}
-          <div className="bg-white rounded-2xl p-4 sm:p-7 shadow-sm border border-slate-200 space-y-5">
+          {/* Card 2: Enrolled Participants Directory */}
+          <div className="bg-white rounded-2xl p-4 sm:p-7 shadow-sm border border-slate-200 space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold text-slate-900 font-heading">
-                    Participant Email Broadcast Center
+                    Enrolled Participants Directory
                   </h3>
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200">
-                    {participants.filter(p => p.email).length} / {participants.length} Registered Emails
+                    {participants.length} Total Enrolled
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                  Send challenge opening alerts and 1-hour closing reminders to all registered participant email addresses.
+                  Roster of all registered learners and mentors across all league teams.
                 </p>
               </div>
             </div>
 
-            {/* Email Status Notice */}
-            {emailStatusMsg && (
-              <div className={`p-4 rounded-xl border text-xs sm:text-sm font-medium flex items-center gap-2.5 ${
-                emailStatusType === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : emailStatusType === 'loading'
-                  ? 'bg-purple-50 text-purple-800 border-purple-200'
-                  : 'bg-rose-50 text-rose-800 border-rose-200'
-              }`}>
-                {emailStatusType === 'loading' ? (
-                  <Sparkles size={16} className="text-[#6d28d9] animate-spin" />
-                ) : emailStatusType === 'success' ? (
-                  <CheckCheck size={18} className="text-emerald-600 flex-shrink-0" />
-                ) : (
-                  <AlertCircle size={18} className="text-rose-600 flex-shrink-0" />
-                )}
-                <span>{emailStatusMsg}</span>
-              </div>
-            )}
-
-            {/* Notification Triggers */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              
-              {/* Trigger 1: Challenge Open Announcement */}
-              <div className="border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 bg-purple-50/20 flex flex-col justify-between">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-xl bg-purple-100 text-[#0a2558] flex items-center justify-center font-bold">
-                      <Bell size={16} className="text-[#6d28d9]" />
-                    </span>
-                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
-                      "Challenge Now Open" Alert
-                    </h4>
-                  </div>
-                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                    Notifies participants that today's challenge is live with instructions, open until {formatTimeDisplay(schedule?.closeTime || '21:00')}, and link to submit evidence.
-                  </p>
-                </div>
-
-                <div className="pt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={isSendingEmail || participants.filter(p => p.email).length === 0}
-                    onClick={() => handleSendNotificationBroadcast('challenge_opened')}
-                    className="flex-1 py-2.5 px-4 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                  >
-                    <Send size={14} />
-                    <span>Send Open Alert ({participants.filter(p => p.email).length})</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Trigger 2: 1-Hour Closing Reminder */}
-              <div className="border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 bg-amber-50/20 flex flex-col justify-between">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
-                      <Clock size={16} className="text-amber-700" />
-                    </span>
-                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
-                      "Closing in 1 Hour" Reminder
-                    </h4>
-                  </div>
-                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                    Urgent reminder sent to participants who haven't submitted yet, warning that submissions close in 1 hour at {formatTimeDisplay(schedule?.closeTime || '21:00')}.
-                  </p>
-                </div>
-
-                <div className="pt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={isSendingEmail || participants.filter(p => p.email).length === 0}
-                    onClick={() => handleSendNotificationBroadcast('closing_soon')}
-                    className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                  >
-                    <Clock size={14} />
-                    <span>Send 1-Hour Reminder</span>
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Registered Email List Preview with Inline Editor */}
+            {/* Registered Participant List with Inline Editor */}
             <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                  Enrolled Participants & Email Delivery Status:
+                  League Participants Roster:
                 </span>
                 <span className="text-xs font-semibold text-purple-800">
-                  {participants.filter(p => p.email && p.email.trim()).length} of {participants.length} ready for emails
+                  {participants.filter(p => p.email && p.email.trim()).length} of {participants.length} have email on file
                 </span>
               </div>
 
