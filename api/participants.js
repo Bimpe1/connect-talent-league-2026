@@ -48,6 +48,32 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing participant id or name' });
       }
 
+      // Hard team capacity limits per official pack (Max 40 total participants)
+      const teamCapacities = {
+        phoenix: 6,
+        vision: 5,
+        unity: 6,
+        hope: 6,
+        spark: 5,
+        talent_stars: 6,
+        bridge: 6
+      };
+
+      const targetTeamId = (p.teamId || '').toLowerCase();
+      const maxCap = teamCapacities[targetTeamId] || 6;
+
+      // Count existing members excluding this participant (allows updating an already enrolled participant)
+      const [countRow] = await sql`
+        SELECT count(*)::int as count FROM participants 
+        WHERE LOWER(team_id) = ${targetTeamId} AND id != ${p.id};
+      `;
+
+      if (countRow && countRow.count >= maxCap) {
+        return res.status(400).json({ 
+          error: `Team is at maximum capacity (${maxCap} places). Please select another team.` 
+        });
+      }
+
       await sql`
         INSERT INTO participants (
           id, name, role, team_id, team_name, 

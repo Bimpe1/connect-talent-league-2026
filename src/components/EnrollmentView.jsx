@@ -10,11 +10,21 @@ export default function EnrollmentView({
 }) {
   const [tab, setTab] = useState('enroll'); // 'enroll' or 'signin'
 
+  // Default to first team with open capacity
+  const firstAvailableTeam = TEAMS.find(
+    t => existingParticipants.filter(p => p.teamId === t.id).length < t.capacity
+  ) || TEAMS[0];
+
   // Enrollment fields
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
-  const [selectedTeamId, setSelectedTeamId] = useState(TEAMS[0].id);
+  const [selectedTeamId, setSelectedTeamId] = useState(firstAvailableTeam.id);
   const [enrollError, setEnrollError] = useState('');
+
+  // Check if entire League is full
+  const allTeamsFull = TEAMS.every(
+    t => existingParticipants.filter(p => p.teamId === t.id).length >= t.capacity
+  );
 
   // Sign in fields
   const [signInName, setSignInName] = useState('');
@@ -44,6 +54,16 @@ export default function EnrollmentView({
     }
 
     const team = TEAMS.find(t => t.id === selectedTeamId) || TEAMS[0];
+    const teamMembersCount = existingParticipants.filter(p => p.teamId === team.id).length;
+
+    // Hard Capacity Enforcement (per team capacity: 5 or 6 places)
+    if (teamMembersCount >= team.capacity) {
+      setEnrollError(
+        `Team "${team.name}" has reached full capacity (${team.capacity}/${team.capacity} places filled). Please select another team with available places.`
+      );
+      return;
+    }
+
     onEnroll({
       name: cleanName,
       role,
@@ -218,39 +238,66 @@ export default function EnrollmentView({
 
             {/* Team Selection */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                3. Choose Your Team (From the 7 Official Teams)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {TEAMS.map(t => {
-                  const isSelected = selectedTeamId === t.id;
-                  const enrolledCount = existingParticipants.filter(p => p.teamId === t.id).length;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setSelectedTeamId(t.id)}
-                      className={`p-3 rounded-xl border-2 text-left transition flex flex-col justify-between ${
-                        isSelected
-                          ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                      }`}
-                    >
-                      <span className="font-bold text-sm block">{t.name}</span>
-                      <span className="text-[11px] text-slate-400 mt-1">{enrolledCount}/{t.capacity} places</span>
-                    </button>
-                  );
-                })}
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  3. Choose Your Team (From the 7 Official Teams)
+                </label>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {existingParticipants.length}/40 League places filled
+                </span>
               </div>
+
+              {allTeamsFull ? (
+                <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 text-amber-900 text-xs sm:text-sm font-medium">
+                  <strong>Notice:</strong> All 7 teams have reached maximum capacity (40/40 places filled). Please speak with Coach Morgan or your Facilitator.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {TEAMS.map(t => {
+                    const isSelected = selectedTeamId === t.id;
+                    const enrolledCount = existingParticipants.filter(p => p.teamId === t.id).length;
+                    const isFull = enrolledCount >= t.capacity;
+
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        disabled={isFull}
+                        onClick={() => !isFull && setSelectedTeamId(t.id)}
+                        className={`p-3 rounded-xl border-2 text-left transition flex flex-col justify-between ${
+                          isFull
+                            ? 'border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-60'
+                            : isSelected
+                            ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-bold text-sm block">{t.name}</span>
+                          {isFull && (
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">
+                              Full
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400 mt-1">
+                          {enrolledCount}/{t.capacity} places {isFull ? '• Closed' : '• Open'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
+              disabled={allTeamsFull}
+              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Enroll &amp; Start League</span>
-              <ArrowRight size={18} />
+              <span>{allTeamsFull ? 'League is Full' : 'Enroll & Start League'}</span>
+              {!allTeamsFull && <ArrowRight size={18} />}
             </button>
           </form>
         )}
