@@ -15,9 +15,7 @@ export default function EnrollmentView({
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [enrollError, setEnrollError] = useState('');
@@ -49,7 +47,7 @@ export default function EnrollmentView({
     // Email validation
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
-      setEnrollError('Please enter a valid email address. Your email is used to securely sign in.');
+      setEnrollError('Please enter a valid email address (e.g. alex@gmail.com).');
       return;
     }
 
@@ -75,11 +73,7 @@ export default function EnrollmentView({
 
     // Password validation
     if (!password || password.length < 6) {
-      setEnrollError('Please create a password of at least 6 characters.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setEnrollError('Passwords do not match. Please re-enter your password confirmation.');
+      setEnrollError('Password must be at least 6 characters.');
       return;
     }
 
@@ -344,37 +338,29 @@ export default function EnrollmentView({
             )}
 
             {/* Display Name */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                1. Approved Display Name
+                Display Name
               </label>
               <input
                 type="text"
-                placeholder="e.g. Jordan T. (First name & initial)"
+                placeholder="e.g. Jordan T."
                 value={displayName}
                 onChange={e => { setDisplayName(e.target.value); setEnrollError(''); }}
                 className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
                 required
               />
-              <span className="text-xs text-slate-400 block font-normal">
-                Choose a unique display name. Only your approved display name is visible on leaderboards.
-              </span>
             </div>
 
-            {/* Email Address for Login & Notifications */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  2. Email Address
-                </label>
-                <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                  Account Login
-                </span>
-              </div>
+            {/* Email Address */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Email Address
+              </label>
               <div className="relative">
                 <input
                   type="email"
-                  placeholder="e.g. jordan.t@example.com"
+                  placeholder="e.g. alex@gmail.com"
                   value={email}
                   onChange={e => { setEmail(e.target.value); setEnrollError(''); }}
                   className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
@@ -382,72 +368,43 @@ export default function EnrollmentView({
                 />
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
-              <span className="text-xs text-slate-500 block font-normal">
-                Your email is used to securely sign in to your league account and receive challenge reminders.
-              </span>
             </div>
 
-            {/* Password Creation */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  3. Create Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Min 6 characters"
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setEnrollError(''); }}
-                    className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-11 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
-                    required
-                  />
-                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  4. Confirm Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Re-type password"
-                    value={confirmPassword}
-                    onChange={e => { setConfirmPassword(e.target.value); setEnrollError(''); }}
-                    className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-11 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
-                    required
-                  />
-                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                  >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Min 6 characters"
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setEnrollError(''); }}
+                  className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-11 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                  required
+                />
+                <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
             {/* Role Selection */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                5. Your Role
+                Role
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setRole('learner')}
-                  className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                  className={`p-3.5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
                     role === 'learner'
                       ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -462,7 +419,7 @@ export default function EnrollmentView({
                 <button
                   type="button"
                   onClick={() => setRole('volunteer')}
-                  className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                  className={`p-3.5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
                     role === 'volunteer'
                       ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -481,10 +438,10 @@ export default function EnrollmentView({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  6. Choose Your Team (Click to select)
+                  Select Team
                 </label>
                 <span className="text-[11px] font-semibold text-slate-500">
-                  {existingParticipants.length}/40 League places filled
+                  {existingParticipants.length}/40 filled
                 </span>
               </div>
 
@@ -496,7 +453,7 @@ export default function EnrollmentView({
 
               {allTeamsFull ? (
                 <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 text-amber-900 text-xs sm:text-sm font-medium">
-                  <strong>Notice:</strong> All 7 teams have reached maximum capacity (40/40 places filled). Please speak with Coach Morgan or your Facilitator.
+                  <strong>Notice:</strong> All teams have reached maximum capacity (40/40 places filled).
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -553,7 +510,7 @@ export default function EnrollmentView({
               disabled={allTeamsFull}
               className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>{allTeamsFull ? 'League is Full' : 'Complete Registration & Submit for Review'}</span>
+              <span>{allTeamsFull ? 'League is Full' : 'Complete Registration'}</span>
               {!allTeamsFull && <ArrowRight size={18} />}
             </button>
           </form>
@@ -564,11 +521,6 @@ export default function EnrollmentView({
         {/* ======================================================== */}
         {tab === 'signin' && (
           <form onSubmit={handleSignInSubmit} className="space-y-5">
-            
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-              Sign in with your registered <strong>email address</strong> (or display name) and <strong>password</strong> to access your daily challenges, submissions, and points.
-            </div>
-
             {/* Error Notification */}
             {signInError && (
               <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium">
@@ -586,7 +538,7 @@ export default function EnrollmentView({
               </div>
             )}
 
-            {/* Email or Display Name Input */}
+            {/* Email Address or Display Name */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 Email Address or Display Name
@@ -594,7 +546,7 @@ export default function EnrollmentView({
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="e.g. jordan.t@example.com or Jordan T."
+                  placeholder="e.g. alex@gmail.com or Alex T."
                   value={signInIdentifier}
                   onChange={e => { setSignInIdentifier(e.target.value); setSignInError(''); }}
                   className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
@@ -605,17 +557,15 @@ export default function EnrollmentView({
               </div>
             </div>
 
-            {/* Password Input */}
+            {/* Password */}
             <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Password
-                </label>
-              </div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Password
+              </label>
               <div className="relative">
                 <input
                   type={showSignInPassword ? "text" : "password"}
-                  placeholder="Enter your account password"
+                  placeholder="Enter your password"
                   value={signInPassword}
                   onChange={e => { setSignInPassword(e.target.value); setSignInError(''); }}
                   className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-11 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
@@ -632,38 +582,6 @@ export default function EnrollmentView({
               </div>
             </div>
 
-            {/* Quick Profile Autofill (fills in email without logging in) */}
-            {existingParticipants.length > 0 && (
-              <div className="space-y-2 pt-1 border-t border-slate-100">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                  Select your profile to auto-fill email:
-                </span>
-                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                  {existingParticipants.map(p => {
-                    const isPending = p.isApproved === false || p.status === 'pending';
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setSignInIdentifier(p.email || p.name);
-                          setSignInError('');
-                        }}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-purple-100 hover:text-purple-900 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 transition flex items-center gap-1.5 shadow-2xs"
-                      >
-                        <span>{p.name}</span>
-                        {isPending && (
-                          <span className="text-[10px] text-amber-700 bg-amber-100 px-1 rounded font-bold">
-                            Pending
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* Sign In Button */}
             <button
               type="submit"
@@ -671,7 +589,7 @@ export default function EnrollmentView({
               className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95 disabled:opacity-50"
             >
               <LogIn size={18} />
-              <span>{isSigningIn ? 'Signing in...' : 'Sign In with Password'}</span>
+              <span>{isSigningIn ? 'Signing in...' : 'Sign In'}</span>
             </button>
           </form>
         )}
