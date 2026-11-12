@@ -30,39 +30,37 @@ export default function SecurityModal({ isOpen, onClose }) {
             </h4>
             <p className="leading-relaxed">
               In this application, hiding the Captain's portal behind a passkey is only the first line of defense. 
-              The true protection resides in <code className="bg-blue-200/60 px-1 py-0.5 rounded font-mono">firestore.rules</code>:
+              The true protection resides in the PostgreSQL serverless backend (<code className="bg-blue-200/60 px-1 py-0.5 rounded font-mono">/api/</code>):
             </p>
           </div>
 
           <div className="space-y-2">
             <div className="p-3 bg-gray-50 border rounded-xl">
-              <span className="font-bold text-gray-900 block mb-0.5">1. Participant Isolation (Read Rule)</span>
+              <span className="font-bold text-gray-900 block mb-0.5">1. Serverless SQL Isolation & Sanitization</span>
               <p className="text-gray-600">
-                Participants can only read their own evidence documents (<code className="font-mono">resource.data.participantId == request.auth.uid</code>). 
-                Captains alone possess elevated access to read all pending queue submissions across all 7 teams.
+                All participant and submission writes use parameterized SQL queries through Neon serverless drivers, protecting against query injection and guaranteeing that participant records are strictly segregated.
               </p>
             </div>
 
             <div className="p-3 bg-gray-50 border rounded-xl">
-              <span className="font-bold text-gray-900 block mb-0.5">2. Prevention of Pre-Approved Submissions (Create Rule)</span>
+              <span className="font-bold text-gray-900 block mb-0.5">2. Prevention of Pre-Approved Submissions</span>
               <p className="text-gray-600">
-                A participant can only create documents in status <code className="font-mono">'pending'</code>. 
-                Any write attempt containing pre-set approved scores or status is immediately rejected by the database engine.
+                Participant submissions are created with default status <code className="font-mono">'pending'</code>. 
+                Scores and points are not calculated or credited on the client; they must be verified and approved by a Captain.
               </p>
             </div>
 
             <div className="p-3 bg-gray-50 border rounded-xl">
-              <span className="font-bold text-gray-900 block mb-0.5">3. Captain-Only Updates (Update Rule)</span>
+              <span className="font-bold text-gray-900 block mb-0.5">3. Captain Scoring Authority</span>
               <p className="text-gray-600">
-                Status changes to <code className="font-mono">'approved'</code> and Talent Point modifications strictly verify that the caller's JWT token has <code className="font-mono">request.auth.token.role == 'captain'</code>. 
-                Even if someone tampers with local browser JavaScript, Firestore returns <code className="font-mono">PERMISSION_DENIED</code>.
+                Talent Point modifications (0–20 TP) and status transitions to <code className="font-mono">'approved'</code> require verified Facilitator authorization. Client tampering cannot bypass server-side validation.
               </p>
             </div>
 
             <div className="p-3 bg-gray-50 border rounded-xl">
-              <span className="font-bold text-gray-900 block mb-0.5">4. Permanent Audit Trail (Delete Rule)</span>
+              <span className="font-bold text-gray-900 block mb-0.5">4. Permanent Audit Trail</span>
               <p className="text-gray-600">
-                Submissions cannot be deleted once entered (<code className="font-mono">allow delete: if false;</code>), guaranteeing complete accountability for volunteer captains and learners.
+                All submissions, timestamps, and approved points are permanently recorded in PostgreSQL, ensuring complete transparency and accountability for volunteers and participants throughout the 4-week League.
               </p>
             </div>
           </div>
@@ -71,7 +69,7 @@ export default function SecurityModal({ isOpen, onClose }) {
         <div className="pt-3 border-t flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition"
+            className="px-5 py-2 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs font-bold transition shadow-sm"
           >
             Got it
           </button>
