@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { totalPoints, teamAverage } from '../lib/points';
+import React, { useState, useEffect } from 'react';
 import { X, Copy, Check, Share2, Sparkles } from 'lucide-react';
 import { WEEKS as DEFAULT_WEEKS, TEAMS } from '../data/curriculum';
 
@@ -12,6 +13,14 @@ export default function WhatsAppTemplatesModal({
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [selectedDay, setSelectedDay] = useState(0);
   const [copied, setCopied] = useState(false);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -36,24 +45,20 @@ welcome.
 
 *Your effort counts. Your ideas matter.*`;
 
-  // Sunday Results Text Calculation
-  const sortedParticipants = [...participants].sort((a, b) => {
-    const aTotal = (a.wk1 || 0) + (a.wk2 || 0) + (a.attendance.wk1 ? 10 : 0) + (a.attendance.wk2 ? 10 : 0);
-    const bTotal = (b.wk1 || 0) + (b.wk2 || 0) + (b.attendance.wk1 ? 10 : 0) + (b.attendance.wk2 ? 10 : 0);
-    return bTotal - aTotal;
-  });
-  const topIndividual = sortedParticipants[0];
+  // Sunday Results Text (built from real totals)
+  const ranked = [...(participants || [])].sort((x, y) => totalPoints(y) - totalPoints(x));
+  const topThree = ranked.slice(0, 3).filter((p) => totalPoints(p) > 0);
+  const teamRanks = TEAMS
+    .map((t) => ({ name: t.name, avg: teamAverage((participants || []).filter((p) => p.teamId === t.id)) }))
+    .sort((x, y) => y.avg - x.avg);
+  const topTeam = teamRanks[0] && teamRanks[0].avg > 0 ? teamRanks[0] : null;
 
   const resultsText = `*CONNECT TALENT LEAGUE - WEEK ${selectedWeek} RESULTS*
 
-Top Individual: ${topIndividual?.name || 'Sam V.'} - 220 TP
-Top Team: Vision - 198.5 TP per member
-${selectedWeek === 1 ? 'Strong Start' : 'Rising Star'}: Maya K. - weekly score up 20 TP
-Kindness Champion: Maya K. - supported peer with text contrast
-
-New Milestones:
-• Alex P. (Growing Confidence - 100 TP)
-• Sam V. (Building Momentum - 250 TP)
+${topThree.length
+    ? `Top Individuals:\n${topThree.map((p, i) => `${i + 1}. ${p.name} - ${totalPoints(p)} TP`).join('\n')}`
+    : 'Top Individuals: results coming soon'}
+${topTeam ? `Top Team: ${topTeam.name} - ${topTeam.avg} TP per member` : ''}
 
 Thank you to everyone who tried something new, supported
 a teammate or kept learning.
@@ -70,7 +75,7 @@ Prize collection: Thursday session at the hub or via buddy drop-off.
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+    <div role="dialog" aria-modal="true" aria-label="WhatsApp message templates" className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="flex justify-between items-center pb-4 border-b border-slate-200">
@@ -83,7 +88,7 @@ Prize collection: Thursday session at the hub or via buddy drop-off.
               <p className="text-xs text-slate-500 font-medium">Official message templates from Page 10 of the pack</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1">
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 p-1">
             <X size={20} />
           </button>
         </div>

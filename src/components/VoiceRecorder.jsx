@@ -34,7 +34,7 @@ export default function VoiceRecorder({ onVoiceRecorded, onTranscriptGenerated }
         };
 
         recognitionRef.current = recognition;
-      } catch (err) {}
+      } catch { /* speech recognition is optional; ignore if unsupported */ }
     }
   }, [onTranscriptGenerated]);
 
@@ -92,9 +92,9 @@ export default function VoiceRecorder({ onVoiceRecorded, onTranscriptGenerated }
       }, 1000);
 
       if (recognitionRef.current) {
-        try { recognitionRef.current.start(); } catch (e) {}
+        try { recognitionRef.current.start(); } catch { /* already started/stopped */ }
       }
-    } catch (err) {
+    } catch {
       setIsRecording(true);
       timerRef.current = setInterval(() => {
         setRecordSeconds(prev => prev + 1);
@@ -111,7 +111,7 @@ export default function VoiceRecorder({ onVoiceRecorded, onTranscriptGenerated }
     setIsRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
+      try { recognitionRef.current.stop(); } catch { /* already started/stopped */ }
     }
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {

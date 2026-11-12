@@ -3,8 +3,8 @@ import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail } from 
 import { sendMagicLink, fetchTeamCounts } from '../lib/api';
 import { TEAMS } from '../data/curriculum';
 
-export default function EnrollmentView({ signinRequest = 0, onOpenCaptainLogin }) {
-  const [tab, setTab] = useState('enroll'); // 'enroll' or 'signin'
+export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLogin }) {
+  const [tab, setTab] = useState(initialTab); // 'enroll' or 'signin'
 
   // Enrollment fields
   const [displayName, setDisplayName] = useState('');
@@ -24,8 +24,6 @@ export default function EnrollmentView({ signinRequest = 0, onOpenCaptainLogin }
 
   useEffect(() => { fetchTeamCounts().then(setTeamCounts).catch(() => {}); }, []);
 
-  // "Captain Sign-In" buttons elsewhere jump straight to the sign-in tab
-  useEffect(() => { if (signinRequest) { setTab('signin'); setSentTo(''); } }, [signinRequest]);
 
   const send = async (addr, profile, setError) => {
     setSending(true);

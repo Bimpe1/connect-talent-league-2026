@@ -1,29 +1,35 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import Header from './components/Header';
 import EnrollmentView from './components/EnrollmentView';
-import ParticipantView from './components/ParticipantView';
-import LeaderboardView from './components/LeaderboardView';
-import BadgesView from './components/BadgesView';
-import CaptainDashboard from './components/CaptainDashboard';
-import WhatsAppTemplatesModal from './components/WhatsAppTemplatesModal';
-import SecurityModal from './components/SecurityModal';
 import { WEEKS as DEFAULT_WEEKS } from './data/curriculum';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import * as api from './lib/api';
+import { evaluateRubric } from './lib/scoring';
+
+const ParticipantView = lazy(() => import('./components/ParticipantView'));
+const LeaderboardView = lazy(() => import('./components/LeaderboardView'));
+const BadgesView = lazy(() => import('./components/BadgesView'));
+const CaptainDashboard = lazy(() => import('./components/CaptainDashboard'));
+const WhatsAppTemplatesModal = lazy(() => import('./components/WhatsAppTemplatesModal'));
 
 export default function App() {
-  const [booting, setBooting] = useState(true);
+  const [booting, setBooting] = useState(isSupabaseConfigured);
   const [currentUser, setCurrentUser] = useState(null); // profile of the signed-in user
-  const [currentTab, setCurrentTab] = useState('challenges'); // 'challenges', 'leaderboard', 'badges', 'captain'
+  const [requestedTab, setCurrentTab] = useState('challenges'); // 'challenges', 'leaderboard', 'badges', 'captain'
   const [participants, setParticipants] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [weeks, setWeeks] = useState(DEFAULT_WEEKS);
   const [signinRequest, setSigninRequest] = useState(0);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
-  const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [securityAlert, setSecurityAlert] = useState(null);
 
   const isCaptain = currentUser?.role === 'captain';
+
+  // UI-level role guard (the real enforcement is Row Level Security in the database):
+  // captains never see participant tabs, participants never see the captain tab.
+  const currentTab = isCaptain
+    ? (requestedTab === 'challenges' || requestedTab === 'badges' ? 'captain' : requestedTab)
+    : (requestedTab === 'captain' ? 'challenges' : requestedTab);
 
   const showError = (err, fallback = 'Something went wrong. Please try again.') => {
     console.error(err);
@@ -48,7 +54,7 @@ export default function App() {
 
   // Restore / react to the Supabase session (magic-link redirect lands here too)
   useEffect(() => {
-    if (!isSupabaseConfigured) { setBooting(false); return; }
+    if (!isSupabaseConfigured) return;
 
     const loadUser = async (session) => {
       if (!session) {
@@ -77,18 +83,13 @@ export default function App() {
   }, []);
 
   // Keep data fresh when switching tabs or returning to the window (cheap alternative to realtime)
-  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentTab]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  useEffect(() => { refresh(); }, [currentTab]);
   useEffect(() => {
     const onFocus = () => refresh();
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [refresh]);
-
-  // UI-level role guard (the real enforcement is Row Level Security in the database)
-  useEffect(() => {
-    if (!isCaptain && currentTab === 'captain') setCurrentTab('challenges');
-    if (isCaptain && (currentTab === 'challenges' || currentTab === 'badges')) setCurrentTab('captain');
-  }, [isCaptain, currentTab]);
 
   const handleLogout = async () => {
     await api.signOut();
@@ -121,25 +122,6 @@ export default function App() {
 
   const handleResetChallenges = () => captainAction(() => api.saveWeeks(null));
 
-  // Simulated AI evaluation engine based on the Connect Talent 4-part rubric
-  const evaluateRubricWithAi = (text) => {
-    const lower = text.toLowerCase();
-    const attempt = 5;
-    const reason = lower.includes('because') || lower.includes('so') || lower.includes('reason') || lower.includes('decided') || lower.includes('since') ? 5 : 0;
-    const evidence = lower.includes('checked') || lower.includes('tested') || lower.includes('buddy') || lower.includes('showed') || lower.includes('asked') ? 5 : 0;
-    const conclusion = lower.includes('next') || lower.includes('change') || lower.includes('learned') || lower.includes('improve') || lower.includes('will') ? 5 : 5;
-    const total = attempt + reason + evidence + conclusion;
-
-    let notes = "Good attempt with clear effort.";
-    if (reason === 5 && evidence === 5) {
-      notes = "Strong reasoning and evidence of testing with a buddy.";
-    } else if (evidence === 0) {
-      notes = "Consider checking with a buddy or neighbor for full evidence points.";
-    }
-
-    return { attempt, reason, evidence, conclusion, total, notes };
-  };
-
   // Participant Submit Challenge
   const handleSubmitChallenge = async (payload) => {
     if (!currentUser || isCaptain) {
@@ -147,7 +129,7 @@ export default function App() {
       return;
     }
     try {
-      await api.insertSubmission(currentUser.id, payload, evaluateRubricWithAi(payload.submissionText));
+      await api.insertSubmission(currentUser.id, payload, evaluateRubric(payload.submissionText));
       await refresh();
     } catch (err) {
       showError(err, 'Could not save your submission. Please try again.');
@@ -226,13 +208,13 @@ export default function App() {
         {/* If no user is logged in, show clean Enrollment / Sign In view */}
         {!currentUser ? (
           <EnrollmentView
-            signinRequest={signinRequest}
-            onOpenCaptainLogin={() => setSigninRequest(n => n + 1)}
+            key={signinRequest}
+            initialTab={signinRequest ? 'signin' : 'enroll'}
             onOpenCaptainLogin={() => setSigninRequest(n => n + 1)}
           />
         ) : (
           /* User is Enrolled / Logged in */
-          <>
+          <Suspense fallback={<div className="py-10 text-center text-sm text-slate-500">Loading…</div>}>
             {/* Participant Challenges View (ONLY visible to the signed-in participant) */}
             {currentTab === 'challenges' && currentUser.role !== 'captain' && (
               <ParticipantView
@@ -274,23 +256,21 @@ export default function App() {
                 onOpenWhatsAppModal={() => setShowWhatsAppModal(true)}
               />
             )}
-          </>
+          </Suspense>
         )}
       </main>
 
-      {/* WhatsApp Broadcast Templates Modal */}
-      <WhatsAppTemplatesModal
-        isOpen={showWhatsAppModal}
-        onClose={() => setShowWhatsAppModal(false)}
-        participants={participants}
-        weeks={weeks}
-      />
-
-      {/* Backend Security Architecture Modal */}
-      <SecurityModal
-        isOpen={showSecurityModal}
-        onClose={() => setShowSecurityModal(false)}
-      />
+      {/* WhatsApp Broadcast Templates Modal (loaded on demand) */}
+      {showWhatsAppModal && (
+        <Suspense fallback={null}>
+          <WhatsAppTemplatesModal
+            isOpen={showWhatsAppModal}
+            onClose={() => setShowWhatsAppModal(false)}
+            participants={participants}
+            weeks={weeks}
+          />
+        </Suspense>
+      )}
 
       {/* Footer on all pages */}
       <footer className="py-5 text-center text-xs sm:text-sm text-slate-500 border-t border-slate-200 bg-white">

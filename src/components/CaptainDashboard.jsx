@@ -1,3 +1,4 @@
+import { attendanceCount, ATTENDANCE_BONUS } from '../lib/points';
 import React, { useState } from 'react';
 import {
   Shield,
@@ -631,12 +632,7 @@ export default function CaptainDashboard({
           <div className="divide-y divide-slate-200 text-sm">
 
             {participants.map(p => {
-              const bonus = (
-                (p.attendance.wk1 ? 1 : 0) +
-                (p.attendance.wk2 ? 1 : 0) +
-                (p.attendance.wk3 ? 1 : 0) +
-                (p.attendance.wk4 ? 1 : 0)
-              ) * 10;
+              const bonus = attendanceCount(p) * ATTENDANCE_BONUS;
 
               return (
                 <div

@@ -29,8 +29,7 @@ export default function ParticipantView({
   currentUser, 
   submissions, 
   weeks,
-  onSubmitChallenge,
-  onNavigateLeaderboard 
+  onSubmitChallenge
 }) {
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
