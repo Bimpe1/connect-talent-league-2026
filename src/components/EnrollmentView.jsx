@@ -33,6 +33,18 @@ export default function EnrollmentView({
   const [signInError, setSignInError] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
 
+  // Helper to trigger enrollment error and scroll directly to it
+  const triggerEnrollError = (msg) => {
+    setEnrollError(msg);
+    setTimeout(() => {
+      const errEl = document.getElementById('enroll-error-bottom');
+      if (errEl) {
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errEl.focus();
+      }
+    }, 50);
+  };
+
   // Handle New Participant Enrollment
   const handleEnrollSubmit = async (e) => {
     e.preventDefault();
@@ -40,52 +52,54 @@ export default function EnrollmentView({
 
     const cleanName = displayName.trim();
     if (!cleanName) {
-      setEnrollError('Please enter an approved display name (e.g. Jordan T.)');
+      triggerEnrollError('Please enter an approved display name (e.g. Jordan T.)');
       return;
     }
 
     // Email validation
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
-      setEnrollError('Please enter a valid email address (e.g. alex@gmail.com).');
+      triggerEnrollError('Please enter a valid email address (e.g. alex@gmail.com).');
       return;
     }
 
-    // Check duplicate email
+    // Check duplicate email (case-insensitive)
     const emailInUse = existingParticipants.some(
       p => p.email && p.email.trim().toLowerCase() === cleanEmail
     );
     if (emailInUse) {
-      setEnrollError(`An account with the email "${cleanEmail}" is already enrolled. Please switch to "Returning Sign-In" to log in.`);
+      triggerEnrollError(
+        `The email address "${cleanEmail}" is already registered. Please switch to Returning Sign-In to log in.`
+      );
       return;
     }
 
-    // Check duplicate name
+    // Check duplicate display name (case-insensitive)
     const isDuplicate = existingParticipants.some(
-      p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
+      p => p.name && p.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
     if (isDuplicate) {
-      setEnrollError(
-        `"${cleanName}" is already enrolled. If this is you, click "Returning Sign-In" above. If you are another participant with the same name, please add an extra initial (e.g. ${cleanName} 2).`
+      triggerEnrollError(
+        `The display name "${cleanName}" is already registered. If this is your account, switch to Returning Sign-In. Otherwise, please add an initial (e.g. ${cleanName} B.).`
       );
       return;
     }
 
     // Password validation
     if (!password || password.length < 6) {
-      setEnrollError('Password must be at least 6 characters.');
+      triggerEnrollError('Password must be at least 6 characters.');
       return;
     }
 
     // Require explicit team selection
     if (!selectedTeamId) {
-      setEnrollError('Please select a team from the available teams below to continue.');
+      triggerEnrollError('Please select a team from the available teams below to continue.');
       return;
     }
 
     const team = TEAMS.find(t => t.id === selectedTeamId);
     if (!team) {
-      setEnrollError('Please select a valid team.');
+      triggerEnrollError('Please select a valid team.');
       return;
     }
 
@@ -93,7 +107,7 @@ export default function EnrollmentView({
 
     // Hard Capacity Enforcement (per team capacity: 5 or 6 places)
     if (teamMembersCount >= team.capacity) {
-      setEnrollError(
+      triggerEnrollError(
         `Team "${team.name}" has reached full capacity (${team.capacity}/${team.capacity} places filled). Please select another team with available places.`
       );
       return;
@@ -115,6 +129,18 @@ export default function EnrollmentView({
     }
   };
 
+  // Helper to trigger sign-in error and scroll to it
+  const triggerSignInError = (msg) => {
+    setSignInError(msg);
+    setTimeout(() => {
+      const errEl = document.getElementById('signin-error-bottom');
+      if (errEl) {
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errEl.focus();
+      }
+    }, 50);
+  };
+
   // Handle Returning Participant Sign In with Email & Password
   const handleSignInSubmit = async (e) => {
     e.preventDefault();
@@ -122,12 +148,12 @@ export default function EnrollmentView({
 
     const cleanIdentifier = signInIdentifier.trim().toLowerCase();
     if (!cleanIdentifier) {
-      setSignInError('Please enter your registered email address or display name.');
+      triggerSignInError('Please enter your registered email address or display name.');
       return;
     }
 
     if (!signInPassword) {
-      setSignInError('Please enter your account password.');
+      triggerSignInError('Please enter your account password.');
       return;
     }
 
@@ -141,8 +167,8 @@ export default function EnrollmentView({
       );
 
       if (!found) {
-        setSignInError(
-          `No enrolled player found matching "${signInIdentifier}". Please verify the email or click "Enroll as New" to create an account.`
+        triggerSignInError(
+          `No enrolled player found matching "${signInIdentifier}". Please verify your email/name or switch to "Enroll as New".`
         );
         setIsSigningIn(false);
         return;
@@ -150,7 +176,7 @@ export default function EnrollmentView({
 
       // Check approval status
       if (found.isApproved === false || found.status === 'pending') {
-        setSignInError(
+        triggerSignInError(
           `⏳ Hi ${found.name}, your registration for Team ${found.teamName || 'League'} is currently pending Captain approval. Once Coach Morgan or your Team Captain approves it, you can log in immediately!`
         );
         setIsSigningIn(false);
@@ -161,7 +187,7 @@ export default function EnrollmentView({
       if (found.passwordHash) {
         const isMatch = await verifyPassword(signInPassword, found.passwordHash);
         if (!isMatch) {
-          setSignInError('Incorrect password. Please verify your password and try again.');
+          triggerSignInError('Incorrect password. Please verify your password and try again.');
           setIsSigningIn(false);
           return;
         }
@@ -173,7 +199,7 @@ export default function EnrollmentView({
 
       onSelectExistingUser(found);
     } catch (err) {
-      setSignInError(`Sign-in error: ${err.message}`);
+      triggerSignInError(`Sign-in error: ${err.message}`);
     } finally {
       setIsSigningIn(false);
     }
@@ -313,30 +339,6 @@ export default function EnrollmentView({
         {tab === 'enroll' && (
           <form onSubmit={handleEnrollSubmit} className="space-y-6">
             
-            {/* Error Notification */}
-            {enrollError && (
-              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium">
-                <AlertCircle size={18} className="text-rose-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <span>{enrollError}</span>
-                  {enrollError.includes('already enrolled') && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTab('signin');
-                        setSignInName(displayName);
-                        setSignInError('');
-                        setEnrollError('');
-                      }}
-                      className="block mt-2 font-bold underline text-rose-900 hover:text-rose-950"
-                    >
-                      Switch to Sign In as "{displayName}" →
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Display Name */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -504,6 +506,34 @@ export default function EnrollmentView({
               )}
             </div>
 
+            {/* Error Notification (At bottom directly above submit button) */}
+            {enrollError && (
+              <div
+                id="enroll-error-bottom"
+                tabIndex={-1}
+                className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium shadow-sm transition outline-none"
+              >
+                <AlertCircle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold block leading-relaxed">{enrollError}</span>
+                  {(enrollError.includes('already registered') || enrollError.includes('already enrolled')) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTab('signin');
+                        setSignInIdentifier(email.trim() || displayName.trim());
+                        setSignInError('');
+                        setEnrollError('');
+                      }}
+                      className="inline-block mt-2 font-bold underline text-rose-900 hover:text-rose-950 text-xs sm:text-sm"
+                    >
+                      Switch to Returning Sign-In →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -521,23 +551,6 @@ export default function EnrollmentView({
         {/* ======================================================== */}
         {tab === 'signin' && (
           <form onSubmit={handleSignInSubmit} className="space-y-5">
-            {/* Error Notification */}
-            {signInError && (
-              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium">
-                <AlertCircle size={18} className="text-rose-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <span>{signInError}</span>
-                  <button
-                    type="button"
-                    onClick={() => { setTab('enroll'); setSignInError(''); }}
-                    className="block mt-2 font-bold underline text-rose-900 hover:text-rose-950"
-                  >
-                    Go to Enroll as New →
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Email Address or Display Name */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -581,6 +594,27 @@ export default function EnrollmentView({
                 </button>
               </div>
             </div>
+
+            {/* Error Notification (At bottom directly above sign-in button) */}
+            {signInError && (
+              <div
+                id="signin-error-bottom"
+                tabIndex={-1}
+                className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium shadow-sm transition outline-none"
+              >
+                <AlertCircle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold block leading-relaxed">{signInError}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setTab('enroll'); setSignInError(''); }}
+                    className="inline-block mt-2 font-bold underline text-rose-900 hover:text-rose-950 text-xs sm:text-sm"
+                  >
+                    Go to Enroll as New →
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Sign In Button */}
             <button
