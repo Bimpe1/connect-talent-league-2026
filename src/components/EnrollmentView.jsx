@@ -177,7 +177,7 @@ export default function EnrollmentView({
       // Check approval status
       if (found.isApproved === false || found.status === 'pending') {
         triggerSignInError(
-          `⏳ Hi ${found.name}, your registration for Team ${found.teamName || 'League'} is currently pending Captain approval. Once Coach Morgan or your Team Captain approves it, you can log in immediately!`
+          `⏳ Hi ${found.name}, your registration for Team ${found.teamName || 'League'} is currently pending approval. Once an admin approves it, you can log in immediately!`
         );
         setIsSigningIn(false);
         return;
@@ -241,7 +241,7 @@ export default function EnrollmentView({
               Welcome, {submittedForApproval.name}!
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-              Your registration for <strong>Team {submittedForApproval.teamName}</strong> has been received. For transparency and participant safety, your Team Captain must approve your registration before you can log in and submit daily challenges.
+              Your registration for <strong>Team {submittedForApproval.teamName}</strong> has been received. An admin will review and approve your registration before you can log in.
             </p>
           </div>
 
@@ -267,7 +267,7 @@ export default function EnrollmentView({
             <div className="flex justify-between pt-1 border-t border-slate-200">
               <span className="text-slate-500 font-medium">Current Status:</span>
               <span className="font-bold text-amber-700 flex items-center gap-1">
-                <Clock size={12} /> Pending Captain Approval
+                <Clock size={12} /> Pending Admin Approval
               </span>
             </div>
           </div>
@@ -278,7 +278,7 @@ export default function EnrollmentView({
               onClick={() => {
                 setSubmittedForApproval(null);
                 setTab('signin');
-                setSignInName(submittedForApproval.name);
+                setSignInIdentifier(submittedForApproval.email || submittedForApproval.name);
               }}
               className="px-6 py-3 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-950/20 transition active:scale-95"
             >
@@ -595,23 +595,33 @@ export default function EnrollmentView({
               </div>
             </div>
 
-            {/* Error Notification (At bottom directly above sign-in button) */}
+            {/* Error / Status Notification (At bottom directly above sign-in button) */}
             {signInError && (
               <div
                 id="signin-error-bottom"
                 tabIndex={-1}
-                className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium shadow-sm transition outline-none"
+                className={`${
+                  signInError.includes('pending')
+                    ? 'bg-amber-50 border-2 border-amber-300 text-amber-900'
+                    : 'bg-rose-50 border-2 border-rose-300 text-rose-800'
+                } rounded-2xl p-4 flex items-start gap-3 text-xs sm:text-sm font-medium shadow-sm transition outline-none`}
               >
-                <AlertCircle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                {signInError.includes('pending') ? (
+                  <Clock size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                )}
                 <div className="flex-1">
                   <span className="font-semibold block leading-relaxed">{signInError}</span>
-                  <button
-                    type="button"
-                    onClick={() => { setTab('enroll'); setSignInError(''); }}
-                    className="inline-block mt-2 font-bold underline text-rose-900 hover:text-rose-950 text-xs sm:text-sm"
-                  >
-                    Go to Enroll as New →
-                  </button>
+                  {!signInError.includes('pending') && (
+                    <button
+                      type="button"
+                      onClick={() => { setTab('enroll'); setSignInError(''); }}
+                      className="inline-block mt-2 font-bold underline text-rose-900 hover:text-rose-950 text-xs sm:text-sm"
+                    >
+                      Go to Enroll as New →
+                    </button>
+                  )}
                 </div>
               </div>
             )}

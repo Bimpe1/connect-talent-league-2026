@@ -419,7 +419,7 @@ export default function ParticipantView({
                     rows={2}
                     value={attendanceText}
                     onChange={e => setAttendanceText(e.target.value)}
-                    placeholder={`e.g. Attended in-person on ${attendanceDay} with Coach Morgan at the centre...`}
+                    placeholder={`e.g. Attended in-person on ${attendanceDay} at the centre...`}
                     className="w-full border-2 border-slate-200 focus:border-[#6d28d9] focus:ring-2 focus:ring-purple-100 rounded-xl p-3 text-sm focus:outline-none bg-white font-medium"
                   />
                 )}
