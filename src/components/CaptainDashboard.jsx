@@ -14,7 +14,8 @@ import {
   Edit3,
   Save,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 
 import {
@@ -59,6 +60,7 @@ export default function CaptainDashboard({
   const [formMaxPoints, setFormMaxPoints] = useState(selectedChallenge.maxPoints || 20);
   const [formCriticalFocus, setFormCriticalFocus] = useState(selectedWeekData.criticalFocus || '');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [saveErrorMsg, setSaveErrorMsg] = useState('');
 
   // When changing selected week or day in editor
   const handleSelectChallengeToEdit = (weekNum, dayIdx) => {
@@ -79,13 +81,15 @@ export default function CaptainDashboard({
     setFormMaxPoints(cData.maxPoints || 20);
     setFormCriticalFocus(wData.criticalFocus || '');
     setSaveSuccessMsg('');
+    setSaveErrorMsg('');
   };
 
   const handleSaveChallenge = (e) => {
     e.preventDefault();
+    setSaveErrorMsg('');
 
     if (!formTitle.trim() || !formInstructions.trim()) {
-      alert("Title and instructions are required.");
+      setSaveErrorMsg("Title and instructions are required.");
       return;
     }
 
@@ -243,6 +247,14 @@ export default function CaptainDashboard({
             <div className="p-3.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
               <Check size={16} className="text-emerald-600" />
               <span>{saveSuccessMsg}</span>
+            </div>
+          )}
+
+          {/* Error Notice */}
+          {saveErrorMsg && (
+            <div className="p-3.5 bg-rose-50 text-rose-800 border border-rose-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+              <AlertCircle size={16} className="text-rose-600 flex-shrink-0" />
+              <span>{saveErrorMsg}</span>
             </div>
           )}
 
@@ -547,9 +559,6 @@ export default function CaptainDashboard({
                               score < 0 ||
                               score > 20
                             ) {
-                              alert(
-                                'Enter a whole-number score between 0 and 20.'
-                              );
                               return;
                             }
 

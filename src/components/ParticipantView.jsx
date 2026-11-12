@@ -19,7 +19,8 @@ import {
   HelpCircle, 
   ShieldCheck,
   MapPin,
-  Calendar
+  Calendar,
+  AlertCircle
 } from 'lucide-react';
 import { WEEKS as DEFAULT_WEEKS } from '../data/curriculum';
 import VoiceRecorder from './VoiceRecorder';
@@ -47,6 +48,7 @@ export default function ParticipantView({
   const [confettiActive, setConfettiActive] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [lastSubmittedTitle, setLastSubmittedTitle] = useState('');
+  const [challengeFormError, setChallengeFormError] = useState('');
 
   // In-Person Attendance State
   const [attendanceDay, setAttendanceDay] = useState('Wednesday');
@@ -55,6 +57,7 @@ export default function ParticipantView({
   const [attendanceVoice, setAttendanceVoice] = useState(null);
   const [attendanceMedia, setAttendanceMedia] = useState(null);
   const [showAttendanceForm, setShowAttendanceForm] = useState(false);
+  const [attendanceFormError, setAttendanceFormError] = useState('');
 
   const activeWeeks = weeks || DEFAULT_WEEKS;
   const currentWeekData = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[0];
@@ -80,8 +83,10 @@ export default function ParticipantView({
   // Handle In-Person Attendance Submission
   const handleAttendanceSubmit = (e) => {
     e.preventDefault();
+    setAttendanceFormError('');
+
     if (!attendanceText.trim() && !attendanceVoice && !attendanceMedia) {
-      alert("Please enter a short note, record a voice note, or attach a photo confirming your physical attendance.");
+      setAttendanceFormError("Please enter a short note, record a voice note, or attach a photo confirming your physical attendance.");
       return;
     }
 
@@ -112,8 +117,10 @@ export default function ParticipantView({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setChallengeFormError('');
+
     if (!submissionText.trim() && !attachedVoice && !attachedMedia) {
-      alert("Please enter a short answer, record a voice note, or attach a photo/drawing.");
+      setChallengeFormError("Please enter a short answer, record a voice note, or attach a photo/drawing.");
       return;
     }
 
@@ -436,6 +443,13 @@ export default function ParticipantView({
                   </div>
                 )}
 
+                {attendanceFormError && (
+                  <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm p-3 rounded-xl flex items-center gap-2 font-medium">
+                    <AlertCircle size={16} className="text-rose-600 flex-shrink-0" />
+                    <span>{attendanceFormError}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2 pt-1">
                   <button
                     type="button"
@@ -673,6 +687,14 @@ export default function ParticipantView({
                 </li>
               </ul>
             </div>
+
+            {/* Validation Notice */}
+            {challengeFormError && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm p-3.5 rounded-2xl flex items-center gap-2.5 font-medium">
+                <AlertCircle size={18} className="text-rose-600 flex-shrink-0" />
+                <span>{challengeFormError}</span>
+              </div>
+            )}
 
             {/* Submit Action */}
             <div className="flex justify-end pt-2">
