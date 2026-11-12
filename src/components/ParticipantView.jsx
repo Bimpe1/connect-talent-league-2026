@@ -19,7 +19,9 @@ import {
   HelpCircle,
   ShieldCheck,
   Lock,
-  MapPin
+  MapPin,
+  Calendar,
+  AlertCircle
 } from 'lucide-react';
 import { WEEKS as DEFAULT_WEEKS } from '../data/curriculum';
 import VoiceRecorder from './VoiceRecorder';
@@ -54,6 +56,7 @@ export default function ParticipantView({
   const [confettiActive, setConfettiActive] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [lastSubmittedTitle, setLastSubmittedTitle] = useState('');
+  const [challengeFormError, setChallengeFormError] = useState('');
 
   // In-Person Attendance State
   const [attendanceDay, setAttendanceDay] = useState('Wednesday');
@@ -62,6 +65,7 @@ export default function ParticipantView({
   const [attendanceVoice, setAttendanceVoice] = useState(null);
   const [attendanceMedia, setAttendanceMedia] = useState(null);
   const [showAttendanceForm, setShowAttendanceForm] = useState(false);
+  const [attendanceFormError, setAttendanceFormError] = useState('');
 
   const activeWeeks = weeks || DEFAULT_WEEKS;
   const currentWeekData = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[0];
@@ -95,8 +99,10 @@ export default function ParticipantView({
   // Handle In-Person Attendance Submission
   const handleAttendanceSubmit = async (e) => {
     e.preventDefault();
+    setAttendanceFormError('');
+
     if (!attendanceText.trim() && !attendanceVoice && !attendanceMedia) {
-      alert("Please enter a short note, record a voice note, or attach a photo confirming your physical attendance.");
+      setAttendanceFormError("Please enter a short note, record a voice note, or attach a photo confirming your physical attendance.");
       return;
     }
 
@@ -128,8 +134,10 @@ export default function ParticipantView({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setChallengeFormError('');
+
     if (!submissionText.trim() && !attachedVoice && !attachedMedia) {
-      alert("Please enter a short answer, record a voice note, or attach a photo/drawing.");
+      setChallengeFormError("Please enter a short answer, record a voice note, or attach a photo/drawing.");
       return;
     }
 
@@ -268,7 +276,7 @@ export default function ParticipantView({
       {/* ============================================================== */}
       {/* 2. WEEKLY IN-PERSON ATTENDANCE CARD (+10 TP)                   */}
       {/* ============================================================== */}
-      <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-sm border border-slate-200 space-y-4">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-sm border border-slate-200 space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3.5">
           <div className="flex items-center gap-2.5">
             <span className="w-10 h-10 rounded-2xl bg-purple-50 text-[#0a2558] flex items-center justify-center font-bold border border-purple-200 flex-shrink-0">
@@ -343,14 +351,14 @@ export default function ParticipantView({
                   disabled={!weekStarted}
                   title={weekStarted ? undefined : `Week ${selectedWeek} hasn't started yet`}
                   onClick={() => setShowAttendanceForm(true)}
-                  className="px-5 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <MapPin size={15} />
                   <span>Claim 10 TP Attendance</span>
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleAttendanceSubmit} className="space-y-4 pt-1 border border-purple-200 bg-purple-50/30 rounded-2xl p-4 sm:p-5">
+              <form onSubmit={handleAttendanceSubmit} className="space-y-4 pt-1 border border-purple-200 bg-purple-50/30 rounded-2xl p-3.5 sm:p-5">
                 <div className="flex justify-between items-center pb-2 border-b border-purple-100">
                   <span className="text-xs sm:text-sm font-bold text-[#0a2558] uppercase tracking-wider">
                     Submit In-Person Attendance Evidence
@@ -369,13 +377,13 @@ export default function ParticipantView({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                     Which day did you attend in person?
                   </label>
-                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
                       <button
                         key={d}
                         type="button"
                         onClick={() => setAttendanceDay(d)}
-                        className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition border ${
+                        className={`py-2 px-0.5 sm:px-1 text-center rounded-xl text-[11px] sm:text-xs font-bold transition border ${
                           attendanceDay === d
                             ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -388,11 +396,11 @@ export default function ParticipantView({
                 </div>
 
                 {/* Evidence Mode Tabs */}
-                <div className="flex gap-2 bg-white p-1 rounded-xl border border-slate-200 text-xs font-bold w-fit">
+                <div className="grid grid-cols-3 gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-bold w-full sm:w-auto sm:inline-flex">
                   <button
                     type="button"
                     onClick={() => setAttendanceMode('text')}
-                    className={`px-3 py-1.5 rounded-lg transition ${
+                    className={`py-1.5 px-2 rounded-lg transition text-center flex items-center justify-center text-[11px] sm:text-xs ${
                       attendanceMode === 'text' ? 'bg-[#0a2558] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -401,24 +409,24 @@ export default function ParticipantView({
                   <button
                     type="button"
                     onClick={() => setAttendanceMode('voice')}
-                    className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`py-1.5 px-2 rounded-lg transition flex items-center justify-center gap-1 text-[11px] sm:text-xs ${
                       attendanceMode === 'voice' ? 'bg-[#0a2558] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Mic size={13} className="text-rose-400" />
-                    <span>Voice Note</span>
-                    {attendanceVoice && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                    <Mic size={13} className="text-rose-400 flex-shrink-0" />
+                    <span className="truncate">Voice</span>
+                    {attendanceVoice && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />}
                   </button>
                   <button
                     type="button"
                     onClick={() => setAttendanceMode('media')}
-                    className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`py-1.5 px-2 rounded-lg transition flex items-center justify-center gap-1 text-[11px] sm:text-xs ${
                       attendanceMode === 'media' ? 'bg-[#0a2558] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Camera size={13} className="text-blue-400" />
-                    <span>Photo Evidence</span>
-                    {attendanceMedia && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                    <Camera size={13} className="text-blue-400 flex-shrink-0" />
+                    <span className="truncate">Photo</span>
+                    {attendanceMedia && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />}
                   </button>
                 </div>
 
@@ -457,17 +465,24 @@ export default function ParticipantView({
                   </div>
                 )}
 
-                <div className="flex justify-end gap-2 pt-1">
+                {attendanceFormError && (
+                  <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm p-3 rounded-xl flex items-center gap-2 font-medium">
+                    <AlertCircle size={16} className="text-rose-600 flex-shrink-0" />
+                    <span>{attendanceFormError}</span>
+                  </div>
+                )}
+
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => setShowAttendanceForm(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700"
+                    className="w-full sm:w-auto px-4 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 text-center"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-950/20 transition active:scale-95 flex items-center gap-1.5"
+                    className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-950/20 transition active:scale-95 flex items-center justify-center gap-1.5"
                   >
                     <Send size={14} />
                     <span>Submit Attendance Evidence (+10 TP)</span>
@@ -482,7 +497,7 @@ export default function ParticipantView({
       {/* ============================================================== */}
       {/* 3. CHALLENGE CARD                                              */}
       {/* ============================================================== */}
-      <div className="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border border-slate-200 space-y-6">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-sm border border-slate-200 space-y-5 sm:space-y-6">
         
         {/* Challenge Header */}
         <div className="space-y-1.5 border-b border-slate-100 pb-4">
@@ -588,16 +603,16 @@ export default function ParticipantView({
           <form onSubmit={handleSubmit} className="space-y-6 pt-1">
             
             {/* Input Mode Selector Bar */}
-            <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-200 pb-3.5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-3 border-b border-slate-200 pb-3">
               <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700">
                 Choose how to submit evidence:
               </span>
               
-              <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 sm:p-1.5 rounded-xl border border-slate-200 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setInputMode('text')}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition border ${
+                  className={`py-1.5 px-2 sm:px-3.5 rounded-lg text-[11px] sm:text-xs md:text-sm font-bold transition border flex items-center justify-center text-center ${
                     inputMode === 'text' 
                       ? 'bg-white text-slate-900 border-slate-300 shadow-sm' 
                       : 'text-slate-600 border-transparent hover:text-slate-900'
@@ -608,28 +623,28 @@ export default function ParticipantView({
                 <button
                   type="button"
                   onClick={() => setInputMode('voice')}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-1.5 border ${
+                  className={`py-1.5 px-2 sm:px-3.5 rounded-lg text-[11px] sm:text-xs md:text-sm font-bold transition flex items-center justify-center gap-1 border text-center ${
                     inputMode === 'voice' 
                       ? 'bg-white text-slate-900 border-slate-300 shadow-sm' 
                       : 'text-slate-600 border-transparent hover:text-slate-900'
                   }`}
                 >
-                  <Mic size={15} className="text-rose-500" />
-                  <span>Voice Note</span>
-                  {attachedVoice && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                  <Mic size={14} className="text-rose-500 flex-shrink-0" />
+                  <span className="truncate">Voice</span>
+                  {attachedVoice && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />}
                 </button>
                 <button
                   type="button"
                   onClick={() => setInputMode('media')}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-1.5 border ${
+                  className={`py-1.5 px-2 sm:px-3.5 rounded-lg text-[11px] sm:text-xs md:text-sm font-bold transition flex items-center justify-center gap-1 border text-center ${
                     inputMode === 'media' 
                       ? 'bg-white text-slate-900 border-slate-300 shadow-sm' 
                       : 'text-slate-600 border-transparent hover:text-slate-900'
                   }`}
                 >
-                  <Camera size={15} className="text-blue-500" />
-                  <span>Photo / Drawing</span>
-                  {attachedMedia && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                  <Camera size={14} className="text-blue-500 flex-shrink-0" />
+                  <span className="truncate">Photo</span>
+                  {attachedMedia && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />}
                 </button>
               </div>
             </div>
@@ -727,6 +742,14 @@ export default function ParticipantView({
                 </li>
               </ul>
             </div>
+
+            {/* Validation Notice */}
+            {challengeFormError && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm p-3.5 rounded-2xl flex items-center gap-2.5 font-medium">
+                <AlertCircle size={18} className="text-rose-600 flex-shrink-0" />
+                <span>{challengeFormError}</span>
+              </div>
+            )}
 
             {/* Submit Action */}
             <div className="flex justify-end pt-2">

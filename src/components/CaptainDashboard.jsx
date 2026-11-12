@@ -16,7 +16,8 @@ import {
   Edit3,
   Save,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 
 import {
@@ -64,6 +65,8 @@ export default function CaptainDashboard({
   const [formMaxPoints, setFormMaxPoints] = useState(selectedChallenge.maxPoints || 20);
   const [formCriticalFocus, setFormCriticalFocus] = useState(selectedWeekData.criticalFocus || '');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [saveErrorMsg, setSaveErrorMsg] = useState('');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // When changing selected week or day in editor
   const handleSelectChallengeToEdit = (weekNum, dayIdx) => {
@@ -84,13 +87,15 @@ export default function CaptainDashboard({
     setFormMaxPoints(cData.maxPoints || 20);
     setFormCriticalFocus(wData.criticalFocus || '');
     setSaveSuccessMsg('');
+    setSaveErrorMsg('');
   };
 
   const handleSaveChallenge = (e) => {
     e.preventDefault();
+    setSaveErrorMsg('');
 
     if (!formTitle.trim() || !formInstructions.trim()) {
-      alert("Title and instructions are required.");
+      setSaveErrorMsg("Title and instructions are required.");
       return;
     }
 
@@ -172,11 +177,11 @@ export default function CaptainDashboard({
       </div>
 
       {/* Navigation Pills */}
-      <div className="flex flex-wrap gap-2.5">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-2.5">
 
         <button
           onClick={() => setSection('queue')}
-          className={`px-5 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 border ${
+          className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border ${
             section === 'queue'
               ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
@@ -185,7 +190,7 @@ export default function CaptainDashboard({
           <span>Review Queue</span>
 
           {pendingSubmissions.length > 0 && (
-            <span className="bg-purple-300 text-[#0a2558] text-xs px-2 py-0.5 rounded-full font-black">
+            <span className="bg-purple-300 text-[#0a2558] text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-black">
               {pendingSubmissions.length}
             </span>
           )}
@@ -193,25 +198,26 @@ export default function CaptainDashboard({
 
         <button
           onClick={() => setSection('manage_challenges')}
-          className={`px-5 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 border ${
+          className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border ${
             section === 'manage_challenges'
               ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
           }`}
         >
-          <Edit3 size={15} />
-          <span>Set & Edit Challenges</span>
+          <Edit3 size={14} />
+          <span className="truncate">Challenges</span>
         </button>
 
         <button
           onClick={() => setSection('badges')}
-          className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
+          className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border ${
             section === 'badges'
               ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
           }`}
         >
-          Award Recognition Badges
+          <Award size={14} />
+          <span className="truncate">Badges</span>
         </button>
 
         <button
@@ -227,20 +233,21 @@ export default function CaptainDashboard({
 
         <button
           onClick={() => setSection('checklist')}
-          className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
+          className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border ${
             section === 'checklist'
               ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
           }`}
         >
-          Checklist
+          <CheckCircle size={14} />
+          <span className="truncate">Checklist</span>
         </button>
       </div>
 
       {/* SECTION 1: SET & EDIT CHALLENGES                               */}
 
       {section === 'manage_challenges' && (
-        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 space-y-6">
+        <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-sm border border-slate-200 space-y-5 sm:space-y-6">
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
             <div>
@@ -255,28 +262,56 @@ export default function CaptainDashboard({
 
             <button
               type="button"
-              onClick={() => {
-                if (
-                  confirm(
-                    "Reset all challenges to the official Connect Talent 2026 Curriculum?"
-                  )
-                ) {
-                  onResetChallenges();
-                  handleSelectChallengeToEdit(2, 0);
-                }
-              }}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition"
+              onClick={() => setShowResetConfirm(true)}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition w-full sm:w-auto justify-center"
             >
               <RotateCcw size={13} />
               <span>Reset to Default Pack</span>
             </button>
           </div>
 
+          {/* In-App Reset Confirmation Dialog */}
+          {showResetConfirm && (
+            <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-2">
+              <p className="text-xs sm:text-sm text-amber-900 font-semibold">
+                Reset all challenges to the official Connect Talent 2026 Curriculum? Any custom edits will be restored to defaults.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onResetChallenges();
+                    handleSelectChallengeToEdit(2, 0);
+                    setShowResetConfirm(false);
+                  }}
+                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shadow-xs"
+                >
+                  Yes, Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(false)}
+                  className="px-3.5 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Success Toast */}
           {saveSuccessMsg && (
             <div className="p-3.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
               <Check size={16} className="text-emerald-600" />
               <span>{saveSuccessMsg}</span>
+            </div>
+          )}
+
+          {/* Error Notice */}
+          {saveErrorMsg && (
+            <div className="p-3.5 bg-rose-50 text-rose-800 border border-rose-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+              <AlertCircle size={16} className="text-rose-600 flex-shrink-0" />
+              <span>{saveErrorMsg}</span>
             </div>
           )}
 
@@ -459,12 +494,12 @@ export default function CaptainDashboard({
               {filteredQueue.map(sub => (
                 <div
                   key={sub.id}
-                  className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200 space-y-4"
+                  className="bg-white rounded-2xl p-4 sm:p-7 shadow-sm border border-slate-200 space-y-4"
                 >
 
-                  <div className="flex justify-between items-baseline border-b border-slate-200 pb-3.5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-baseline gap-2 border-b border-slate-200 pb-3.5">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h4 className="font-bold text-base sm:text-lg text-slate-900">
                           {sub.participantName}
                         </h4>
@@ -480,7 +515,7 @@ export default function CaptainDashboard({
                       </span>
                     </div>
 
-                    <span className={`text-xs sm:text-sm font-bold px-3.5 py-1 rounded-full border ${
+                    <span className={`text-xs sm:text-sm font-bold px-3 py-1 rounded-full border self-start sm:self-auto ${
                       sub.isAttendance
                         ? 'text-emerald-800 bg-emerald-50 border-emerald-300'
                         : 'text-blue-700 bg-blue-50 border-blue-200'
@@ -573,9 +608,6 @@ export default function CaptainDashboard({
                               score < 0 ||
                               score > 20
                             ) {
-                              alert(
-                                'Enter a whole-number score between 0 and 20.'
-                              );
                               return;
                             }
 
@@ -598,7 +630,7 @@ export default function CaptainDashboard({
                     <button
                       type="button"
                       onClick={() => onApproveSubmission(sub.id)}
-                      className="px-6 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95"
+                      className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 text-center justify-center flex items-center"
                     >
                       {sub.isAttendance ? 'Approve Attendance (+10 TP)' : `Approve ${sub.aiScore?.total ?? 15} TP`}
                     </button>
