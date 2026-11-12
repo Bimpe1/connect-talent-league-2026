@@ -266,14 +266,17 @@ export default function App() {
     attachedVoice,
     attachedMedia,
     isTeamMission,
-    isReflection
+    isReflection,
+    isAttendance
   }) => {
     if (!currentUser || currentUser.role === 'captain') {
       triggerSecurityViolation("Only enrolled participants can submit challenge evidence.");
       return;
     }
 
-    const aiEvaluation = evaluateRubricWithAi(submissionText);
+    const aiEvaluation = isAttendance
+      ? { total: 10, notes: "In-person attendance claimed by participant." }
+      : evaluateRubricWithAi(submissionText);
 
     const newSub = {
       id: `sub_${Date.now()}`,
@@ -287,11 +290,14 @@ export default function App() {
       mediaType,
       attachedVoice,
       attachedMedia,
+      isTeamMission: !!isTeamMission,
+      isReflection: !!isReflection,
+      isAttendance: !!isAttendance,
       aiScore: aiEvaluation,
       aiNotes: aiEvaluation.notes,
       status: 'pending',
       submittedAt: `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      type: isTeamMission ? "Team Mission" : isReflection ? "Sunday Reflection" : "Daily Challenge"
+      type: isAttendance ? "In-Person Attendance" : isTeamMission ? "Team Mission" : isReflection ? "Sunday Reflection" : "Daily Challenge"
     };
 
     setSubmissions(prev => [newSub, ...prev]);
@@ -319,7 +325,7 @@ export default function App() {
     const targetSub = submissions.find(s => s.id === id);
     if (!targetSub) return;
 
-    const awardedPoints = targetSub.aiScore?.total || 20;
+    const awardedPoints = targetSub.aiScore?.total ?? (targetSub.isAttendance ? 10 : 20);
 
     const updatedSub = { 
       ...targetSub, 
@@ -336,6 +342,19 @@ export default function App() {
     setParticipants(prev => prev.map(p => {
       if (p.id === targetSub.participantId) {
         const wkKey = targetSub.weekNumber === 1 ? 'wk1' : targetSub.weekNumber === 2 ? 'wk2' : targetSub.weekNumber === 3 ? 'wk3' : 'wk4';
+        
+        if (targetSub.isAttendance) {
+          const updated = {
+            ...p,
+            attendance: {
+              ...p.attendance,
+              [wkKey]: true
+            }
+          };
+          saveParticipant(updated);
+          return updated;
+        }
+
         const currentPoints = p[wkKey] || 0;
         const updated = {
           ...p,

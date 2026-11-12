@@ -74,6 +74,7 @@ export async function ensureTables(sql) {
         attached_media JSONB,
         is_team_mission BOOLEAN DEFAULT FALSE,
         is_reflection BOOLEAN DEFAULT FALSE,
+        is_attendance BOOLEAN DEFAULT FALSE,
         status VARCHAR(50) DEFAULT 'pending',
         ai_score JSONB,
         submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -99,6 +100,11 @@ export async function ensureTables(sql) {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
+
+    // Ensure is_attendance column exists on submissions
+    try {
+      await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS is_attendance BOOLEAN DEFAULT FALSE;`;
+    } catch (e) {}
 
     tablesInitialized = true;
   } catch (err) {

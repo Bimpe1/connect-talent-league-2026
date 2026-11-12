@@ -37,6 +37,7 @@ export default async function handler(req, res) {
           attached_media as "attachedMedia",
           is_team_mission as "isTeamMission",
           is_reflection as "isReflection",
+          is_attendance as "isAttendance",
           status,
           ai_score as "aiScore",
           submitted_at as "submittedAt"
@@ -57,7 +58,7 @@ export default async function handler(req, res) {
           id, participant_id, participant_name, team_id, team_name,
           week_number, challenge_day, challenge_title, submission_text,
           media_type, attached_voice, attached_media, is_team_mission,
-          is_reflection, status, ai_score
+          is_reflection, is_attendance, status, ai_score
         ) VALUES (
           ${sub.id},
           ${sub.participantId},
@@ -73,6 +74,7 @@ export default async function handler(req, res) {
           ${JSON.stringify(sub.attachedMedia || null)},
           ${!!sub.isTeamMission},
           ${!!sub.isReflection},
+          ${!!sub.isAttendance},
           ${sub.status || 'pending'},
           ${JSON.stringify(sub.aiScore || { total: 15 })}
         )

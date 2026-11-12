@@ -8,16 +8,18 @@ import {
   Sparkles, 
   Check, 
   FileText, 
-  PenTool,
-  Info,
-  ChevronRight,
-  UserCheck,
-  Flame,
-  Award,
-  Trophy,
-  X,
-  HelpCircle,
-  ShieldCheck
+  PenTool, 
+  Info, 
+  ChevronRight, 
+  UserCheck, 
+  Flame, 
+  Award, 
+  Trophy, 
+  X, 
+  HelpCircle, 
+  ShieldCheck,
+  MapPin,
+  Calendar
 } from 'lucide-react';
 import { WEEKS as DEFAULT_WEEKS } from '../data/curriculum';
 import VoiceRecorder from './VoiceRecorder';
@@ -46,6 +48,14 @@ export default function ParticipantView({
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [lastSubmittedTitle, setLastSubmittedTitle] = useState('');
 
+  // In-Person Attendance State
+  const [attendanceDay, setAttendanceDay] = useState('Wednesday');
+  const [attendanceText, setAttendanceText] = useState('');
+  const [attendanceMode, setAttendanceMode] = useState('text'); // 'text', 'voice', 'media'
+  const [attendanceVoice, setAttendanceVoice] = useState(null);
+  const [attendanceMedia, setAttendanceMedia] = useState(null);
+  const [showAttendanceForm, setShowAttendanceForm] = useState(false);
+
   const activeWeeks = weeks || DEFAULT_WEEKS;
   const currentWeekData = activeWeeks.find(w => w.weekNumber === selectedWeek) || activeWeeks[0];
   const activeChallenge = currentWeekData.challenges[selectedDayIndex] || currentWeekData.challenges[0];
@@ -56,10 +66,49 @@ export default function ParticipantView({
     s => s.weekNumber === selectedWeek && s.challengeTitle === activeChallenge.title
   );
 
+  // Check if physical attendance is already verified or pending for selectedWeek
+  const isAttendanceVerified = !!currentUser.attendance?.[`wk${selectedWeek}`];
+  const existingAttendanceSub = mySubmissions.find(
+    s => s.weekNumber === selectedWeek && s.isAttendance
+  );
+
   // Calculate current streak (number of challenges completed in this week)
   const completedInCurrentWeek = currentWeekData.challenges.filter(c =>
     mySubmissions.some(s => s.weekNumber === selectedWeek && s.challengeTitle === c.title)
   ).length;
+
+  // Handle In-Person Attendance Submission
+  const handleAttendanceSubmit = (e) => {
+    e.preventDefault();
+    if (!attendanceText.trim() && !attendanceVoice && !attendanceMedia) {
+      alert("Please enter a short note, record a voice note, or attach a photo confirming your physical attendance.");
+      return;
+    }
+
+    let fullNote = attendanceText.trim() || `Attended in person at the centre on ${attendanceDay}.`;
+    if (attendanceVoice?.transcript) {
+      fullNote += `\n\n[Voice Note]: ${attendanceVoice.transcript}`;
+    }
+
+    onSubmitChallenge({
+      weekNumber: selectedWeek,
+      challengeDay: attendanceDay,
+      challengeTitle: `Week ${selectedWeek} In-Person Attendance`,
+      submissionText: fullNote,
+      mediaType: attendanceMedia?.type || (attendanceVoice ? 'voice' : 'text'),
+      attachedVoice: attendanceVoice,
+      attachedMedia: attendanceMedia,
+      isAttendance: true
+    });
+
+    setLastSubmittedTitle(`Week ${selectedWeek} In-Person Attendance (+10 TP)`);
+    setAttendanceText('');
+    setAttendanceVoice(null);
+    setAttendanceMedia(null);
+    setShowAttendanceForm(false);
+    setConfettiActive(true);
+    setShowCelebrationModal(true);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -184,6 +233,7 @@ export default function ParticipantView({
             onClick={() => {
               setSelectedWeek(w.weekNumber);
               setSelectedDayIndex(0);
+              setShowAttendanceForm(false);
             }}
             className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all border ${
               selectedWeek === w.weekNumber
@@ -197,7 +247,219 @@ export default function ParticipantView({
       </div>
 
       {/* ============================================================== */}
-      {/* 2. CHALLENGE CARD                                              */}
+      {/* 2. WEEKLY IN-PERSON ATTENDANCE CARD (+10 TP)                   */}
+      {/* ============================================================== */}
+      <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-sm border border-slate-200 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3.5">
+          <div className="flex items-center gap-2.5">
+            <span className="w-10 h-10 rounded-2xl bg-purple-50 text-[#0a2558] flex items-center justify-center font-bold border border-purple-200 flex-shrink-0">
+              <MapPin size={20} className="text-[#6d28d9]" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
+                  In-Person Attendance
+                </h3>
+                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                  +10 TP Bonus
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium">
+                Attend physically at the Connect Talent centre on any day in Week {selectedWeek} to claim 10 TP.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            {isAttendanceVerified ? (
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-3.5 py-1 rounded-full">
+                <CheckCircle2 size={16} className="text-emerald-600" />
+                <span>Week {selectedWeek} Verified (+10 TP)</span>
+              </span>
+            ) : existingAttendanceSub ? (
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-800 bg-amber-50 border border-amber-300 px-3.5 py-1 rounded-full">
+                <Clock size={15} className="text-amber-600" />
+                <span>Pending Captain Review (+10 TP)</span>
+              </span>
+            ) : (
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                Not Claimed Yet
+              </span>
+            )}
+          </div>
+        </div>
+
+        {isAttendanceVerified ? (
+          <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
+            <CheckCircle2 className="text-emerald-600 flex-shrink-0" size={24} />
+            <div className="text-xs sm:text-sm text-emerald-950 font-medium leading-relaxed">
+              <strong>Attendance Confirmed:</strong> Your physical in-person attendance for Week {selectedWeek} has been verified by the Captain. 10 Talent Points have been added to your score!
+            </div>
+          </div>
+        ) : existingAttendanceSub ? (
+          <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-4 space-y-2">
+            <div className="flex justify-between items-center text-xs font-bold text-amber-900">
+              <span className="flex items-center gap-1.5">
+                <MapPin size={13} className="text-amber-600" />
+                <span>Evidence Submitted ({existingAttendanceSub.challengeDay || 'In-Person Session'})</span>
+              </span>
+              <span className="text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full text-[11px]">
+                In Captain Queue
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-700 bg-white p-3 rounded-xl border border-amber-100 whitespace-pre-wrap font-medium">
+              {existingAttendanceSub.submissionText}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {!showAttendanceForm ? (
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-purple-50/40 border border-purple-100 rounded-2xl p-4">
+                <div className="text-xs sm:text-sm text-slate-700">
+                  <span className="font-bold text-[#0a2558] block mb-0.5">Did you visit the centre this week?</span>
+                  Submit a quick note, photo, or voice check-in confirming when you attended.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAttendanceForm(true)}
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 flex items-center gap-1.5 flex-shrink-0"
+                >
+                  <MapPin size={15} />
+                  <span>Claim 10 TP Attendance</span>
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleAttendanceSubmit} className="space-y-4 pt-1 border border-purple-200 bg-purple-50/30 rounded-2xl p-4 sm:p-5">
+                <div className="flex justify-between items-center pb-2 border-b border-purple-100">
+                  <span className="text-xs sm:text-sm font-bold text-[#0a2558] uppercase tracking-wider">
+                    Submit In-Person Attendance Evidence
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAttendanceForm(false)}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {/* Day of Week Selector */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Which day did you attend in person?
+                  </label>
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setAttendanceDay(d)}
+                        className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition border ${
+                          attendanceDay === d
+                            ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {d.slice(0, 3)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Evidence Mode Tabs */}
+                <div className="flex gap-2 bg-white p-1 rounded-xl border border-slate-200 text-xs font-bold w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceMode('text')}
+                    className={`px-3 py-1.5 rounded-lg transition ${
+                      attendanceMode === 'text' ? 'bg-[#0a2558] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Quick Note
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceMode('voice')}
+                    className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                      attendanceMode === 'voice' ? 'bg-[#0a2558] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Mic size={13} className="text-rose-400" />
+                    <span>Voice Note</span>
+                    {attendanceVoice && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceMode('media')}
+                    className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                      attendanceMode === 'media' ? 'bg-[#0a2558] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Camera size={13} className="text-blue-400" />
+                    <span>Photo Evidence</span>
+                    {attendanceMedia && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                  </button>
+                </div>
+
+                {/* Mode Contents */}
+                {attendanceMode === 'text' && (
+                  <textarea
+                    rows={2}
+                    value={attendanceText}
+                    onChange={e => setAttendanceText(e.target.value)}
+                    placeholder={`e.g. Attended in-person on ${attendanceDay} with Coach Morgan at the centre...`}
+                    className="w-full border-2 border-slate-200 focus:border-[#6d28d9] focus:ring-2 focus:ring-purple-100 rounded-xl p-3 text-sm focus:outline-none bg-white font-medium"
+                  />
+                )}
+
+                {attendanceMode === 'voice' && (
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2">
+                    <span className="text-xs text-slate-500 font-medium block">
+                      Record a quick 10-second voice note saying when you visited:
+                    </span>
+                    <VoiceRecorder
+                      onRecordingComplete={audioData => setAttendanceVoice(audioData)}
+                      savedAudio={attendanceVoice}
+                    />
+                  </div>
+                )}
+
+                {attendanceMode === 'media' && (
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2">
+                    <span className="text-xs text-slate-500 font-medium block">
+                      Attach a selfie, photo of the sign-in sheet, or photo at the centre:
+                    </span>
+                    <MediaUploader
+                      onMediaCaptured={mediaData => setAttendanceMedia(mediaData)}
+                      savedMedia={attendanceMedia}
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowAttendanceForm(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-950/20 transition active:scale-95 flex items-center gap-1.5"
+                  >
+                    <Send size={14} />
+                    <span>Submit Attendance Evidence (+10 TP)</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ============================================================== */}
+      {/* 3. CHALLENGE CARD                                              */}
       {/* ============================================================== */}
       <div className="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border border-slate-200 space-y-6">
         

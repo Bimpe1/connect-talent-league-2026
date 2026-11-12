@@ -181,17 +181,6 @@ export default function CaptainDashboard({
         </button>
 
         <button
-          onClick={() => setSection('attendance')}
-          className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
-            section === 'attendance'
-              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
-              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
-          }`}
-        >
-          Thursday Attendance
-        </button>
-
-        <button
           onClick={() => setSection('badges')}
           className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
             section === 'badges'
@@ -441,17 +430,30 @@ export default function CaptainDashboard({
 
                   <div className="flex justify-between items-baseline border-b border-slate-200 pb-3.5">
                     <div>
-                      <h4 className="font-bold text-base sm:text-lg text-slate-900">
-                        {sub.participantName}
-                      </h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-base sm:text-lg text-slate-900">
+                          {sub.participantName}
+                        </h4>
+                        {sub.isAttendance && (
+                          <span className="text-[11px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                            📍 In-Person Attendance Claim
+                          </span>
+                        )}
+                      </div>
 
                       <span className="text-xs sm:text-sm text-slate-500 font-medium">
-                        {sub.teamName} · Week {sub.weekNumber} {sub.challengeDay}
+                        {sub.teamName} · Week {sub.weekNumber} · {sub.challengeDay || 'Physical Attendance'}
                       </span>
                     </div>
 
-                    <span className="text-xs sm:text-sm font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3.5 py-1 rounded-full">
-                      Suggested {sub.aiScore?.total ?? 15} / 20 TP
+                    <span className={`text-xs sm:text-sm font-bold px-3.5 py-1 rounded-full border ${
+                      sub.isAttendance
+                        ? 'text-emerald-800 bg-emerald-50 border-emerald-300'
+                        : 'text-blue-700 bg-blue-50 border-blue-200'
+                    }`}>
+                      {sub.isAttendance 
+                        ? `Attendance +${sub.aiScore?.total ?? 10} TP` 
+                        : `Suggested ${sub.aiScore?.total ?? 15} / 20 TP`}
                     </span>
                   </div>
 
@@ -572,7 +574,7 @@ export default function CaptainDashboard({
                       onClick={() => onApproveSubmission(sub.id)}
                       className="px-6 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95"
                     >
-                      Approve {sub.aiScore?.total ?? 15} TP
+                      {sub.isAttendance ? 'Approve Attendance (+10 TP)' : `Approve ${sub.aiScore?.total ?? 15} TP`}
                     </button>
 
                   </div>
@@ -598,73 +600,6 @@ export default function CaptainDashboard({
             </div>
           )}
 
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* SECTION 3: ATTENDANCE                                          */}
-      {/* ============================================================== */}
-
-      {section === 'attendance' && (
-        <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200 space-y-4">
-
-          <div className="text-sm text-slate-600 font-medium border-b border-slate-100 pb-3">
-            Click boxes to toggle 1 (attended) or 0 (missed). Thursday sessions earn 10 TP attendance bonus.
-          </div>
-
-          <div className="divide-y divide-slate-200 text-sm">
-
-            {participants.map(p => {
-              const bonus = (
-                (p.attendance.wk1 ? 1 : 0) +
-                (p.attendance.wk2 ? 1 : 0) +
-                (p.attendance.wk3 ? 1 : 0) +
-                (p.attendance.wk4 ? 1 : 0)
-              ) * 10;
-
-              return (
-                <div
-                  key={p.id}
-                  className="py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-4 first:pt-0 last:pb-0"
-                >
-
-                  <div>
-                    <h5 className="font-bold text-slate-900 text-sm sm:text-base">
-                      {p.name}
-                    </h5>
-
-                    <span className="text-slate-500 text-xs sm:text-sm font-medium">
-                      {p.teamName}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-
-                    {['wk1', 'wk2', 'wk3', 'wk4'].map((wk, i) => (
-                      <button
-                        key={wk}
-                        onClick={() => onToggleAttendance(p.id, wk)}
-                        className={`w-8 h-8 rounded-lg font-bold text-xs sm:text-sm border transition ${
-                          p.attendance[wk]
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-slate-300'
-                        }`}
-                        title={`Week ${i + 1}`}
-                      >
-                        {p.attendance[wk] ? '1' : '0'}
-                      </button>
-                    ))}
-
-                    <span className="text-sm font-black text-blue-700 ml-2 w-16 text-right">
-                      +{bonus} TP
-                    </span>
-
-                  </div>
-                </div>
-              );
-            })}
-
-          </div>
         </div>
       )}
 
