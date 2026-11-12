@@ -8,7 +8,17 @@ import CaptainDashboard from './components/CaptainDashboard';
 import WhatsAppTemplatesModal from './components/WhatsAppTemplatesModal';
 import SecurityModal from './components/SecurityModal';
 import { WEEKS as DEFAULT_WEEKS } from './data/curriculum';
-import { Key, AlertTriangle, X, ShieldAlert } from 'lucide-react';
+import { Key, AlertTriangle, X, ShieldAlert, Cloud } from 'lucide-react';
+import {
+  fetchParticipants,
+  saveParticipant,
+  fetchSubmissions,
+  saveSubmission,
+  fetchCaptains,
+  saveCaptain,
+  fetchWeeks,
+  saveWeek
+} from './services/api';
 
 const CAPTAIN_ACCOUNT = { 
   id: 'c_morgan', 
@@ -98,6 +108,46 @@ export default function App() {
     } catch (e) {}
   }, [weeks]);
 
+  // Periodic Cloud Sync with Vercel Postgres / Database API
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCloudData() {
+      try {
+        const [cloudParticipants, cloudSubmissions, cloudCaptains, cloudWeeks] = await Promise.all([
+          fetchParticipants(participants),
+          fetchSubmissions(submissions),
+          fetchCaptains(captains),
+          fetchWeeks(weeks)
+        ]);
+
+        if (isMounted) {
+          if (Array.isArray(cloudParticipants) && cloudParticipants.length > 0) {
+            setParticipants(cloudParticipants);
+          }
+          if (Array.isArray(cloudSubmissions) && cloudSubmissions.length > 0) {
+            setSubmissions(cloudSubmissions);
+          }
+          if (Array.isArray(cloudCaptains) && cloudCaptains.length > 0) {
+            setCaptains(cloudCaptains);
+          }
+          if (Array.isArray(cloudWeeks) && cloudWeeks.length > 0) {
+            setWeeks(cloudWeeks);
+          }
+        }
+      } catch (err) {
+        console.warn("Background cloud sync check:", err);
+      }
+    }
+
+    loadCloudData();
+    const interval = setInterval(loadCloudData, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Strict role enforcement
   // Ensure participants cannot access captain dashboard, and captains cannot access participant tabs or badges
   useEffect(() => {
@@ -137,6 +187,7 @@ export default function App() {
     };
 
     setParticipants(prev => [...prev, newParticipant]);
+    saveParticipant(newParticipant);
     setCurrentUser(newParticipant);
     setCurrentTab('challenges');
   };
@@ -165,11 +216,13 @@ export default function App() {
       if (w.weekNumber === weekNumber) {
         const updatedChallenges = [...w.challenges];
         updatedChallenges[dayIndex] = updatedChallenge;
-        return {
+        const updated = {
           ...w,
           challenges: updatedChallenges,
           criticalFocus: updatedCriticalFocus || w.criticalFocus
         };
+        saveWeek(weekNumber, updated);
+        return updated;
       }
       return w;
     }));
@@ -242,11 +295,14 @@ export default function App() {
     };
 
     setSubmissions(prev => [newSub, ...prev]);
+    saveSubmission(newSub);
 
     // Check First Step badge upon submitting first challenge
     setParticipants(prev => prev.map(p => {
       if (p.id === currentUser.id && !p.badges.includes("first_step")) {
-        return { ...p, badges: [...p.badges, "first_step"] };
+        const updated = { ...p, badges: [...p.badges, "first_step"] };
+        saveParticipant(updated);
+        return updated;
       }
       return p;
     }));
@@ -265,25 +321,28 @@ export default function App() {
 
     const awardedPoints = targetSub.aiScore?.total || 20;
 
+    const updatedSub = { 
+      ...targetSub, 
+      status: 'approved', 
+      approvedBy: currentUser.name, 
+      approvedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+    };
+    saveSubmission(updatedSub);
+
     setSubmissions(prev => prev.map(s => 
-      s.id === id 
-        ? { 
-            ...s, 
-            status: 'approved', 
-            approvedBy: currentUser.name, 
-            approvedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-          }
-        : s
+      s.id === id ? updatedSub : s
     ));
 
     setParticipants(prev => prev.map(p => {
       if (p.id === targetSub.participantId) {
-        const wkKey = targetSub.weekNumber === 1 ? 'wk1' : 'wk2';
+        const wkKey = targetSub.weekNumber === 1 ? 'wk1' : targetSub.weekNumber === 2 ? 'wk2' : targetSub.weekNumber === 3 ? 'wk3' : 'wk4';
         const currentPoints = p[wkKey] || 0;
-        return {
+        const updated = {
           ...p,
           [wkKey]: currentPoints + awardedPoints
         };
+        saveParticipant(updated);
+        return updated;
       }
       return p;
     }));
@@ -297,6 +356,18 @@ const handleAdjustScore = (id, newScore) => {
 
   if (newScore === '' || !Number.isInteger(val) || val < 0 || val > 20) {
     return;
+  }
+
+  const targetSub = submissions.find(s => s.id === id);
+  if (targetSub) {
+    const updatedSub = {
+      ...targetSub,
+      aiScore: {
+        ...targetSub.aiScore,
+        total: val
+      }
+    };
+    saveSubmission(updatedSub);
   }
 
   setSubmissions(prev => prev.map(s =>
@@ -318,13 +389,15 @@ const handleAdjustScore = (id, newScore) => {
 
     setParticipants(prev => prev.map(p => {
       if (p.id === participantId) {
-        return {
+        const updated = {
           ...p,
           attendance: {
             ...p.attendance,
             [sessionKey]: !p.attendance[sessionKey]
           }
         };
+        saveParticipant(updated);
+        return updated;
       }
       return p;
     }));
@@ -336,7 +409,9 @@ const handleAdjustScore = (id, newScore) => {
 
     setParticipants(prev => prev.map(p => {
       if (p.id === participantId && !p.badges.includes(badgeId)) {
-        return { ...p, badges: [...p.badges, badgeId] };
+        const updated = { ...p, badges: [...p.badges, badgeId] };
+        saveParticipant(updated);
+        return updated;
       }
       return p;
     }));
@@ -388,6 +463,7 @@ const handleAdjustScore = (id, newScore) => {
       };
 
       setCaptains(prev => [...prev, newCap]);
+      saveCaptain(newCap);
       setCurrentUser(newCap);
       setCurrentTab('captain');
       setShowCaptainLoginModal(false);
