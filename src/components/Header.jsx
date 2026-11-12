@@ -12,21 +12,27 @@ export default function Header({
   const isCaptain = currentUser?.role === 'captain';
 
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-40 transition-all shadow-sm">
+    <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 transition-all shadow-sm">
       <div className="max-w-5xl mx-auto px-3.5 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
         
-        {/* Left: Brand Logo & STACKED Title (Not on the same line) */}
-        <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-sm flex-shrink-0">
-            <span className="font-heading font-black text-white">CT</span>
-          </div>
+        {/* Left: Official Connect Talent Brand Logo & STACKED Title */}
+        <div className="flex items-center gap-2.5 sm:gap-3.5 flex-shrink-0">
+          <img 
+            src="/connect-logo.png" 
+            alt="Connect Talent CIO Logo" 
+            className="w-9 h-9 sm:w-11 sm:h-11 object-contain drop-shadow-sm flex-shrink-0"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "https://connect-talent.org/assets/images/logos/connect-logo.png";
+            }}
+          />
 
           {/* Stacked Title: Connect Talent on top line, League 2026 on line below */}
           <div className="flex flex-col">
-            <span className="font-heading font-black text-slate-900 tracking-tight text-base sm:text-xl leading-none">
+            <span className="font-heading font-black text-[#0a2558] tracking-tight text-base sm:text-xl leading-none">
               Connect Talent
             </span>
-            <span className="text-[10px] sm:text-xs font-extrabold text-blue-600 tracking-wider uppercase mt-0.5 sm:mt-1">
+            <span className="text-[10px] sm:text-xs font-black bg-gradient-to-r from-[#0a2558] via-[#4338ca] to-[#7c3aed] bg-clip-text text-transparent tracking-wider uppercase mt-0.5 sm:mt-1">
               {isCaptain ? "Captain Admin" : "League 2026"}
             </span>
           </div>
@@ -34,16 +40,16 @@ export default function Header({
 
         {/* Center: Dynamic Role-Specific Navigation (Desktop only) */}
         {currentUser && (
-          <nav className="hidden md:flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <nav className="hidden md:flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
             {isCaptain ? (
               /* Captain Navigation: ONLY Captain Dashboard and Leaderboard (NO Badges) */
               <>
                 <button
                   onClick={() => setCurrentTab('captain')}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 border ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${
                     currentTab === 'captain'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'text-slate-600 border-transparent hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+                      : 'text-slate-600 border-transparent hover:text-[#0a2558]'
                   }`}
                 >
                   <Shield size={15} />
@@ -57,10 +63,10 @@ export default function Header({
 
                 <button
                   onClick={() => setCurrentTab('leaderboard')}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
                     currentTab === 'leaderboard'
-                      ? 'bg-white text-slate-900 border-slate-300 shadow-sm'
-                      : 'text-slate-600 border-transparent hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+                      : 'text-slate-600 border-transparent hover:text-[#0a2558]'
                   }`}
                 >
                   Leaderboard
@@ -71,10 +77,10 @@ export default function Header({
               <>
                 <button
                   onClick={() => setCurrentTab('challenges')}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
                     currentTab === 'challenges'
-                      ? 'bg-white text-slate-900 border-slate-300 shadow-sm'
-                      : 'text-slate-600 border-transparent hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+                      : 'text-slate-600 border-transparent hover:text-[#0a2558]'
                   }`}
                 >
                   Daily Challenge
@@ -82,10 +88,10 @@ export default function Header({
 
                 <button
                   onClick={() => setCurrentTab('leaderboard')}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
                     currentTab === 'leaderboard'
-                      ? 'bg-white text-slate-900 border-slate-300 shadow-sm'
-                      : 'text-slate-600 border-transparent hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+                      : 'text-slate-600 border-transparent hover:text-[#0a2558]'
                   }`}
                 >
                   Leaderboard
@@ -93,10 +99,10 @@ export default function Header({
 
                 <button
                   onClick={() => setCurrentTab('badges')}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all border ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
                     currentTab === 'badges'
-                      ? 'bg-white text-slate-900 border-slate-300 shadow-sm'
-                      : 'text-slate-600 border-transparent hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+                      : 'text-slate-600 border-transparent hover:text-[#0a2558]'
                   }`}
                 >
                   Badges
@@ -111,10 +117,10 @@ export default function Header({
           {currentUser ? (
             <div className="flex items-center gap-1.5 sm:gap-3">
               {/* Participant / Captain Identity Chip */}
-              <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-800">
-                <span className="max-w-[85px] sm:max-w-none truncate">{currentUser.name}</span>
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs">
+                <span className="max-w-[85px] sm:max-w-none truncate font-bold text-[#0a2558]">{currentUser.name}</span>
                 {currentUser.teamName && (
-                  <span className="hidden xs:inline text-[11px] sm:text-xs text-blue-700 bg-blue-50 border border-blue-200 font-bold px-1.5 sm:px-2 py-0.5 rounded-md">
+                  <span className="hidden xs:inline text-[11px] sm:text-xs text-purple-700 bg-purple-50 border border-purple-200 font-bold px-1.5 sm:px-2 py-0.5 rounded-md">
                     {currentUser.teamName}
                   </span>
                 )}
@@ -133,7 +139,7 @@ export default function Header({
           ) : (
             <button
               onClick={onOpenCaptainLogin}
-              className="text-xs sm:text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition shadow-sm"
+              className="text-xs sm:text-sm font-bold text-[#0a2558] bg-indigo-50/80 hover:bg-indigo-100/90 border border-indigo-200/90 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition shadow-sm"
             >
               Captain Sign-In
             </button>
@@ -143,21 +149,25 @@ export default function Header({
 
       {/* Mobile Sub-Navigation Bar (Optimized for touch on iOS & Android) */}
       {currentUser && (
-        <div className="md:hidden border-t border-slate-200 px-2 py-2 flex justify-around text-xs sm:text-sm font-semibold bg-slate-50">
+        <div className="md:hidden border-t border-slate-200 px-2 py-2 flex justify-around text-xs sm:text-sm font-semibold bg-slate-50/90">
           {isCaptain ? (
             <>
               <button
                 onClick={() => setCurrentTab('captain')}
-                className={`py-1 px-3 rounded-lg font-bold transition ${
-                  currentTab === 'captain' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600'
+                className={`py-1.5 px-3 rounded-xl font-bold transition ${
+                  currentTab === 'captain'
+                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
+                    : 'text-slate-600'
                 }`}
               >
                 Captain Dashboard
               </button>
               <button
                 onClick={() => setCurrentTab('leaderboard')}
-                className={`py-1 px-3 rounded-lg font-bold transition ${
-                  currentTab === 'leaderboard' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600'
+                className={`py-1.5 px-3 rounded-xl font-bold transition ${
+                  currentTab === 'leaderboard'
+                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
+                    : 'text-slate-600'
                 }`}
               >
                 Leaderboard
@@ -167,24 +177,30 @@ export default function Header({
             <>
               <button
                 onClick={() => setCurrentTab('challenges')}
-                className={`py-1 px-3 rounded-lg font-bold transition ${
-                  currentTab === 'challenges' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600'
+                className={`py-1.5 px-3 rounded-xl font-bold transition ${
+                  currentTab === 'challenges'
+                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
+                    : 'text-slate-600'
                 }`}
               >
                 Challenge
               </button>
               <button
                 onClick={() => setCurrentTab('leaderboard')}
-                className={`py-1 px-3 rounded-lg font-bold transition ${
-                  currentTab === 'leaderboard' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600'
+                className={`py-1.5 px-3 rounded-xl font-bold transition ${
+                  currentTab === 'leaderboard'
+                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
+                    : 'text-slate-600'
                 }`}
               >
                 Leaderboard
               </button>
               <button
                 onClick={() => setCurrentTab('badges')}
-                className={`py-1 px-3 rounded-lg font-bold transition ${
-                  currentTab === 'badges' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600'
+                className={`py-1.5 px-3 rounded-xl font-bold transition ${
+                  currentTab === 'badges'
+                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
+                    : 'text-slate-600'
                 }`}
               >
                 Badges

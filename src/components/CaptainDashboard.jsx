@@ -126,7 +126,7 @@ export default function CaptainDashboard({
       {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-5">
         <div>
-          <span className="text-xs sm:text-sm font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3.5 py-1 rounded-full inline-block mb-1.5">
+          <span className="text-xs sm:text-sm font-bold text-[#0a2558] tracking-wider uppercase bg-purple-50 border border-purple-200 px-3.5 py-1 rounded-full inline-block mb-1.5">
             Facilitator Portal
           </span>
 
@@ -155,14 +155,14 @@ export default function CaptainDashboard({
           onClick={() => setSection('queue')}
           className={`px-5 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 border ${
             section === 'queue'
-              ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
           }`}
         >
           <span>Review Queue</span>
 
           {pendingSubmissions.length > 0 && (
-            <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full font-black">
+            <span className="bg-purple-300 text-[#0a2558] text-xs px-2 py-0.5 rounded-full font-black">
               {pendingSubmissions.length}
             </span>
           )}
@@ -172,7 +172,7 @@ export default function CaptainDashboard({
           onClick={() => setSection('manage_challenges')}
           className={`px-5 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 border ${
             section === 'manage_challenges'
-              ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
           }`}
         >
@@ -184,7 +184,7 @@ export default function CaptainDashboard({
           onClick={() => setSection('attendance')}
           className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
             section === 'attendance'
-              ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
           }`}
         >
@@ -195,7 +195,7 @@ export default function CaptainDashboard({
           onClick={() => setSection('badges')}
           className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
             section === 'badges'
-              ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
           }`}
         >
@@ -206,7 +206,7 @@ export default function CaptainDashboard({
           onClick={() => setSection('checklist')}
           className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
             section === 'checklist'
-              ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
               : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
           }`}
         >
@@ -394,7 +394,7 @@ export default function CaptainDashboard({
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition active:scale-95"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition active:scale-95"
               >
                 <Save size={16} />
                 <span>Save & Publish Challenge</span>
@@ -559,7 +559,7 @@ export default function CaptainDashboard({
                               return updated;
                             });
                           }}
-                          className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-xs font-bold text-[#0a2558] transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           Save Score
                         </button>
@@ -570,7 +570,7 @@ export default function CaptainDashboard({
                     <button
                       type="button"
                       onClick={() => onApproveSubmission(sub.id)}
-                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95"
+                      className="px-6 py-2.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition active:scale-95"
                     >
                       Approve {sub.aiScore?.total ?? 15} TP
                     </button>

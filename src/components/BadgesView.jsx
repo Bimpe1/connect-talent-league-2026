@@ -24,7 +24,7 @@ export default function BadgesView({ currentUser, participants }) {
     <div className="max-w-4xl mx-auto space-y-7 py-3">
       {/* Title */}
       <div className="text-center space-y-2 pb-1">
-        <span className="text-xs sm:text-sm font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3.5 py-1 rounded-full inline-block">
+        <span className="text-xs sm:text-sm font-bold text-[#0a2558] tracking-wider uppercase bg-purple-50 border border-purple-200 px-3.5 py-1 rounded-full inline-block">
           Celebrate Every Step
         </span>
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 font-heading tracking-tight">

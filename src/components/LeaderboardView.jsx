@@ -45,7 +45,7 @@ export default function LeaderboardView({ participants }) {
     <div className="max-w-4xl mx-auto space-y-7 py-3">
       {/* Title */}
       <div className="text-center space-y-2 pb-1">
-        <span className="text-xs sm:text-sm font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3.5 py-1 rounded-full inline-block">
+        <span className="text-xs sm:text-sm font-bold text-[#0a2558] tracking-wider uppercase bg-purple-50 border border-purple-200 px-3.5 py-1 rounded-full inline-block">
           Standings & Progress
         </span>
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 font-heading tracking-tight">
@@ -61,9 +61,9 @@ export default function LeaderboardView({ participants }) {
         <div className="flex w-full sm:w-auto bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1.5">
           <button
             onClick={() => setActiveTab('teams')}
-            className={`flex-1 sm:flex-initial px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition border ${
+            className={`flex-1 sm:flex-initial px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition border ${
               activeTab === 'teams' 
-                ? 'bg-white text-slate-900 border-slate-300 shadow-sm' 
+                ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm' 
                 : 'text-slate-600 border-transparent hover:text-slate-900'
             }`}
           >
@@ -71,9 +71,9 @@ export default function LeaderboardView({ participants }) {
           </button>
           <button
             onClick={() => setActiveTab('individuals')}
-            className={`flex-1 sm:flex-initial px-3 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition border ${
+            className={`flex-1 sm:flex-initial px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition border ${
               activeTab === 'individuals' 
-                ? 'bg-white text-slate-900 border-slate-300 shadow-sm' 
+                ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm' 
                 : 'text-slate-600 border-transparent hover:text-slate-900'
             }`}
           >
@@ -101,10 +101,10 @@ export default function LeaderboardView({ participants }) {
                 </div>
 
                 <div className="text-right">
-                  <span className="text-base sm:text-lg font-black text-blue-700">
+                  <span className="text-base sm:text-lg font-black text-[#0a2558]">
                     {team.avgTPPerMember}
                   </span>
-                  <span className="text-xs sm:text-sm text-slate-500 ml-1 font-semibold">avg TP</span>
+                  <span className="text-xs sm:text-sm text-purple-700 ml-1 font-semibold">avg TP</span>
                 </div>
               </div>
             ))}
@@ -127,10 +127,10 @@ export default function LeaderboardView({ participants }) {
                   </div>
 
                   <div className="text-right">
-                    <span className="text-base sm:text-lg font-black text-blue-700">
+                    <span className="text-base sm:text-lg font-black text-[#0a2558]">
                       {p.totalTP}
                     </span>
-                    <span className="text-xs sm:text-sm text-slate-500 ml-1 font-semibold">TP</span>
+                    <span className="text-xs sm:text-sm text-purple-700 ml-1 font-semibold">TP</span>
                   </div>
                 </div>
               ))}

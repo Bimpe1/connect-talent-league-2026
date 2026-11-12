@@ -510,7 +510,7 @@ const handleAdjustScore = (id, newScore) => {
                 onClick={() => { setCaptainModalMode('signin'); setLoginError(''); }}
                 className={`flex-1 py-1.5 rounded-lg transition ${
                   captainModalMode === 'signin'
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -521,7 +521,7 @@ const handleAdjustScore = (id, newScore) => {
                 onClick={() => { setCaptainModalMode('register'); setLoginError(''); }}
                 className={`flex-1 py-1.5 rounded-lg transition ${
                   captainModalMode === 'register'
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                    ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -584,7 +584,7 @@ const handleAdjustScore = (id, newScore) => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm transition shadow-sm"
+                  className="px-5 py-2 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white font-bold rounded-xl text-xs sm:text-sm transition shadow-sm"
                 >
                   {captainModalMode === 'signin' ? 'Sign In as Captain' : 'Register Captain'}
                 </button>

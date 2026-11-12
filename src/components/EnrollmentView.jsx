@@ -81,22 +81,31 @@ export default function EnrollmentView({
   return (
     <div className="max-w-xl mx-auto py-5 sm:py-8 px-3.5 sm:px-4 space-y-6">
       
-      {/* Welcome Banner */}
-      <div className="text-center space-y-1 pb-1">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading tracking-tight">
+      {/* Welcome Banner with Official Connect Talent Logo */}
+      <div className="text-center space-y-3 pb-1 flex flex-col items-center">
+        <img 
+          src="/connect-logo.png" 
+          alt="Connect Talent CIO Logo" 
+          className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-sm"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "https://connect-talent.org/assets/images/logos/connect-logo.png";
+          }}
+        />
+        <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-[#0a2558] via-[#4338ca] to-[#7c3aed] bg-clip-text text-transparent font-heading tracking-tight">
           Connect Talent League 2026
         </h1>
       </div>
 
       {/* Mode Switcher Tabs: Enroll vs Sign In */}
-      <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-1.5">
+      <div className="flex bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 gap-1.5">
         <button
           type="button"
           onClick={() => { setTab('enroll'); setEnrollError(''); setSignInError(''); }}
           className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition border ${
             tab === 'enroll'
-              ? 'bg-white text-slate-900 border-slate-300 shadow-sm'
-              : 'text-slate-600 border-transparent hover:text-slate-900'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm border-transparent'
+              : 'text-slate-600 border-transparent hover:text-[#0a2558]'
           }`}
         >
           <UserPlus size={16} />
@@ -108,8 +117,8 @@ export default function EnrollmentView({
           onClick={() => { setTab('signin'); setEnrollError(''); setSignInError(''); }}
           className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition border ${
             tab === 'signin'
-              ? 'bg-white text-slate-900 border-slate-300 shadow-sm'
-              : 'text-slate-600 border-transparent hover:text-slate-900'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white shadow-sm border-transparent'
+              : 'text-slate-600 border-transparent hover:text-[#0a2558]'
           }`}
         >
           <LogIn size={16} />
@@ -160,7 +169,7 @@ export default function EnrollmentView({
                 placeholder="e.g. Jordan T. (First name & initial)"
                 value={displayName}
                 onChange={e => { setDisplayName(e.target.value); setEnrollError(''); }}
-                className="w-full border-2 border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
                 required
               />
               <span className="text-xs text-slate-400 block font-normal">
@@ -179,7 +188,7 @@ export default function EnrollmentView({
                   onClick={() => setRole('learner')}
                   className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition flex items-center justify-between ${
                     role === 'learner'
-                      ? 'border-blue-600 bg-blue-50/60 text-blue-900 shadow-sm'
+                      ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                   }`}
                 >
@@ -187,14 +196,14 @@ export default function EnrollmentView({
                     <span className="font-bold text-sm sm:text-base block">Learner</span>
                     <span className="text-xs text-slate-500 font-normal">Building digital skills</span>
                   </div>
-                  {role === 'learner' && <Check size={18} className="text-blue-600" />}
+                  {role === 'learner' && <Check size={18} className="text-[#6d28d9]" />}
                 </button>
                 <button
                   type="button"
                   onClick={() => setRole('volunteer')}
                   className={`p-3.5 sm:p-4 rounded-2xl border-2 text-left transition flex items-center justify-between ${
                     role === 'volunteer'
-                      ? 'border-blue-600 bg-blue-50/60 text-blue-900 shadow-sm'
+                      ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                   }`}
                 >
@@ -202,7 +211,7 @@ export default function EnrollmentView({
                     <span className="font-bold text-sm sm:text-base block">Volunteer</span>
                     <span className="text-xs text-slate-500 font-normal">Supporting peers</span>
                   </div>
-                  {role === 'volunteer' && <Check size={18} className="text-blue-600" />}
+                  {role === 'volunteer' && <Check size={18} className="text-[#6d28d9]" />}
                 </button>
               </div>
             </div>
@@ -223,7 +232,7 @@ export default function EnrollmentView({
                       onClick={() => setSelectedTeamId(t.id)}
                       className={`p-3 rounded-xl border-2 text-left transition flex flex-col justify-between ${
                         isSelected
-                          ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-sm'
+                          ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
                           : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                       }`}
                     >
@@ -238,7 +247,7 @@ export default function EnrollmentView({
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition active:scale-95"
+              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
             >
               <span>Enroll &amp; Start League</span>
               <ArrowRight size={18} />
@@ -283,7 +292,7 @@ export default function EnrollmentView({
                 placeholder="e.g. Jordan T."
                 value={signInName}
                 onChange={e => { setSignInName(e.target.value); setSignInError(''); }}
-                className="w-full border-2 border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
+                className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
                 required
                 autoFocus
               />
@@ -295,7 +304,7 @@ export default function EnrollmentView({
             {/* Sign In Button */}
             <button
               type="submit"
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition active:scale-95"
+              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
             >
               <LogIn size={18} />
               <span>Sign In to My Account</span>
@@ -308,7 +317,7 @@ export default function EnrollmentView({
       <div className="text-center pt-2">
         <button
           onClick={onOpenCaptainLogin}
-          className="text-xs sm:text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-xl transition shadow-sm"
+          className="text-xs sm:text-sm font-bold text-[#0a2558] bg-indigo-50/80 hover:bg-indigo-100/90 border border-indigo-200/90 px-4 py-2.5 rounded-xl transition shadow-sm"
         >
           Facilitator / Captain Sign-In &amp; Register
         </button>

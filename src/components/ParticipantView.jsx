@@ -114,14 +114,14 @@ export default function ParticipantView({
       {/* ============================================================== */}
       {/* 1. WEEKLY RHYTHM & STREAK BANNER                                */}
       {/* ============================================================== */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-4 sm:p-5 text-white shadow-lg space-y-3.5">
+      <div className="bg-gradient-to-r from-[#0a2558] via-[#2e1065] to-[#4c1d95] rounded-3xl p-4 sm:p-5 text-white shadow-lg space-y-3.5 border border-purple-900/30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/10 pb-3">
           <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-xl bg-blue-500/30 flex items-center justify-center font-bold text-amber-300">
+            <span className="w-8 h-8 rounded-xl bg-purple-500/30 flex items-center justify-center font-bold text-amber-300">
               <Trophy size={18} />
             </span>
             <div>
-              <span className="text-xs font-bold text-blue-200 uppercase tracking-wider block">
+              <span className="text-xs font-bold text-purple-200 uppercase tracking-wider block">
                 {currentUser.teamName || 'Your'} Team Arena
               </span>
               <h3 className="text-base sm:text-lg font-bold font-heading">
@@ -154,7 +154,7 @@ export default function ParticipantView({
                 onClick={() => setSelectedDayIndex(idx)}
                 className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-between border ${
                   isCurrent
-                    ? 'bg-blue-600 text-white border-blue-400 shadow-md ring-2 ring-white/50'
+                    ? 'bg-gradient-to-b from-[#0a2558] to-[#6d28d9] text-white border-purple-400 shadow-md ring-2 ring-purple-300/50'
                     : isDone
                     ? 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40'
                     : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
@@ -187,7 +187,7 @@ export default function ParticipantView({
             }}
             className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all border ${
               selectedWeek === w.weekNumber
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -416,7 +416,7 @@ export default function ParticipantView({
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-base font-bold shadow-md shadow-blue-500/25 transition active:scale-95 flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-2xl text-base font-bold shadow-md shadow-indigo-950/20 transition active:scale-95 flex items-center justify-center gap-2"
               >
                 <Send size={18} />
                 <span>Submit Evidence to Captain</span>
@@ -483,7 +483,7 @@ export default function ParticipantView({
             </div>
 
             <div className="space-y-1">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full inline-block">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#0a2558] bg-purple-50 border border-purple-200 px-3 py-0.5 rounded-full inline-block">
                 Team {currentUser.teamName || 'League'}
               </span>
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading">
@@ -505,14 +505,14 @@ export default function ParticipantView({
               <div className="h-6 w-px bg-slate-200" />
               <div className="text-center">
                 <span className="block text-slate-400 font-normal text-[10px] uppercase">Max Points</span>
-                <span className="text-blue-600 text-sm">Up to 20 TP</span>
+                <span className="text-indigo-600 text-sm">Up to 20 TP</span>
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => setShowCelebrationModal(false)}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-md shadow-blue-500/25 transition active:scale-95"
+              className="w-full py-3 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-2xl text-sm font-bold shadow-md shadow-indigo-950/20 transition active:scale-95"
             >
               Keep Going!
             </button>
