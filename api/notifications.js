@@ -121,45 +121,79 @@ export default async function handler(req, res) {
   `;
 
   let deliveredCount = 0;
-  let providerUsed = 'simulated';
-  let deliveryError = null;
+  let failedCount = 0;
+  let providerUsed = process.env.RESEND_API_KEY ? 'resend' : 'simulated';
+  let errorDetails = [];
 
   // Try live delivery if RESEND_API_KEY is configured
   if (process.env.RESEND_API_KEY) {
-    try {
-      // Send via Resend API
-      const recipientEmails = validRecipients.map(r => r.email);
-      const resendRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: process.env.EMAIL_FROM || 'Connect Talent League <onboarding@resend.dev>',
-          to: recipientEmails.length === 1 ? recipientEmails[0] : recipientEmails,
-          subject,
-          html: htmlBody
-        })
-      });
+    const fromAddress = process.env.EMAIL_FROM || 'Connect Talent League <onboarding@resend.dev>';
+    
+    // Send to each recipient individually for privacy and per-recipient delivery resilience
+    for (const recipient of validRecipients) {
+      try {
+        const resendRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: fromAddress,
+            to: recipient.email,
+            subject,
+            html: htmlBody
+          })
+        });
 
-      if (resendRes.ok) {
-        providerUsed = 'resend';
-        deliveredCount = validRecipients.length;
-      } else {
-        const errText = await resendRes.text();
-        console.warn('Resend API returned error:', errText);
-        deliveryError = errText;
+        if (resendRes.ok) {
+          deliveredCount++;
+        } else {
+          failedCount++;
+          const errData = await resendRes.json().catch(() => ({}));
+          const errMsg = errData.message || `HTTP ${resendRes.status}`;
+          console.warn(`Resend failed for ${recipient.email}:`, errMsg);
+          errorDetails.push(`${recipient.email}: ${errMsg}`);
+        }
+      } catch (err) {
+        failedCount++;
+        console.warn(`Failed sending email to ${recipient.email}:`, err.message);
+        errorDetails.push(`${recipient.email}: ${err.message}`);
       }
-    } catch (err) {
-      console.warn('Failed to call Resend API:', err.message);
-      deliveryError = err.message;
     }
+  } else {
+    // Simulated fallback when no RESEND_API_KEY
+    deliveredCount = validRecipients.length;
   }
 
-  // Fallback / simulated delivery if no live provider or provider test
-  if (providerUsed === 'simulated') {
-    deliveredCount = validRecipients.length;
+  // Construct helpful status message
+  let responseMessage = '';
+  if (providerUsed === 'resend') {
+    if (deliveredCount > 0 && failedCount === 0) {
+      responseMessage = `Successfully delivered live emails to ${deliveredCount} participant(s)!`;
+    } else if (deliveredCount > 0 && failedCount > 0) {
+      const isDomainRestriction = errorDetails.some(e => 
+        e.toLowerCase().includes('only send testing emails') || 
+        e.toLowerCase().includes('verify your domain') ||
+        e.toLowerCase().includes('validation_error')
+      );
+      responseMessage = `Delivered to ${deliveredCount} participant(s). ${failedCount} skipped (${
+        isDomainRestriction 
+          ? 'Resend test sandbox only allows sending to your account email until you verify your domain at resend.com/domains' 
+          : errorDetails[0]
+      }).`;
+    } else {
+      const isDomainRestriction = errorDetails.some(e => 
+        e.toLowerCase().includes('only send testing emails') || 
+        e.toLowerCase().includes('verify your domain') ||
+        e.toLowerCase().includes('validation_error')
+      );
+      responseMessage = isDomainRestriction
+        ? `Resend Sandbox Restriction: The free test domain (onboarding@resend.dev) only delivers to your own registered Resend account email. To send to other emails, verify your domain at resend.com/domains.`
+        : `Resend error: ${errorDetails[0] || 'Could not deliver emails.'}`;
+    }
+  } else {
+    responseMessage = `Email queued for ${deliveredCount} participant(s) (simulated mode. Add RESEND_API_KEY to Vercel for live delivery).`;
   }
 
   // Record in Database Log
@@ -176,7 +210,7 @@ export default async function handler(req, res) {
           ${subject},
           ${JSON.stringify(validRecipients.map(r => r.email))},
           ${deliveredCount},
-          ${providerUsed === 'resend' ? 'delivered' : 'simulated'}
+          ${providerUsed === 'resend' ? (deliveredCount > 0 ? 'delivered' : 'failed') : 'simulated'}
         );
       `;
     }
@@ -185,14 +219,13 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({
-    success: true,
+    success: deliveredCount > 0 || providerUsed === 'simulated',
     type,
     deliveredCount,
+    failedCount,
     provider: providerUsed,
     recipients: validRecipients.map(r => r.email),
-    message: providerUsed === 'resend'
-      ? `Successfully delivered email notification to ${deliveredCount} participant(s).`
-      : `Email queued for ${deliveredCount} participant(s) (${providerUsed} mode. Add RESEND_API_KEY to Vercel for live delivery).`,
-    error: deliveryError
+    message: responseMessage,
+    errors: errorDetails
   });
 }
