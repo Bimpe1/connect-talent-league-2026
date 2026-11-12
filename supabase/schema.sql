@@ -209,6 +209,82 @@ $$;
 grant execute on function public.team_counts() to anon, authenticated;
 
 -- ---------------------------------------------------------------
+-- Time-gated challenges
+-- Each daily challenge is open between release_time and close_time (UK time by default) on its
+-- calendar date. Saturday (team mission) and Sunday (reflection) stay open (ungated_days).
+-- Captains can edit all of this from the dashboard ("Schedule"), stored in league_config.schedule:
+--   gating        false = nothing is time-gated
+--   start_date    Monday of week 1
+--   overrides     {"2026-11-17": {"mode":"open"|"locked"|"custom","release_time":"HH:MM","close_time":"HH:MM"}}
+-- ---------------------------------------------------------------
+alter table public.league_config add column if not exists schedule jsonb not null default
+  '{"gating":true,"start_date":"2026-11-16","release_time":"09:00","close_time":"20:00","timezone":"Europe/London","ungated_days":["Saturday","Sunday"],"overrides":{}}';
+
+alter table public.league_config drop constraint if exists schedule_times_valid;
+alter table public.league_config add constraint schedule_times_valid check (
+  schedule->>'release_time' ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+  and schedule->>'close_time' ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+  and (schedule->>'start_date') ~ '^\d{4}-\d{2}-\d{2}$'
+);
+
+-- Server clock, so the app never trusts the device's clock.
+create or replace function public.server_now() returns timestamptz
+language sql stable as $$ select now(); $$;
+grant execute on function public.server_now() to authenticated;
+
+-- One row per challenge day (4 weeks x 7 days) with its opening/closing instants.
+create or replace function public.challenge_windows()
+returns table (week_number int, day_name text, day_date date, opens_at timestamptz,
+               closes_at timestamptz, ungated boolean, locked boolean)
+language sql stable security definer set search_path = public as $$
+  with cfg as (select schedule as s from public.league_config where id = 1),
+  days as (
+    select w as wk, d as idx, c.s,
+           (c.s->>'start_date')::date + ((w - 1) * 7 + d) as dt,
+           (array['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])[d + 1] as dname
+    from cfg c, generate_series(1, 4) w, generate_series(0, 6) d
+  )
+  select wk, dname, dt,
+         ((dt::text || ' ' || coalesce(o->>'release_time', s->>'release_time'))::timestamp at time zone (s->>'timezone')),
+         ((dt::text || ' ' || coalesce(o->>'close_time',   s->>'close_time'))::timestamp   at time zone (s->>'timezone')),
+         -- coalesce: a NULL here (no override) would make `not ungated` NULL and silently skip the gate
+         coalesce(coalesce((s->>'gating')::boolean, true) = false
+                  or (s->'ungated_days') ? dname
+                  or o->>'mode' = 'open', false),
+         coalesce(o->>'mode' = 'locked', false)
+  from days
+  cross join lateral (select s->'overrides'->(dt::text) as o) ov
+  order by wk, idx;
+$$;
+grant execute on function public.challenge_windows() to authenticated;
+
+-- Enforce the window on every submission (the UI lock is only a convenience).
+create or replace function public.submissions_gate() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare w record;
+begin
+  select * into w from public.challenge_windows() cw
+   where cw.week_number = new.week_number and cw.day_name = new.challenge_day;
+  if not found then
+    raise exception 'Unknown challenge day';
+  end if;
+  if w.locked then
+    raise exception 'This challenge is locked by your captain.';
+  end if;
+  if not w.ungated and now() < w.opens_at then
+    raise exception 'This challenge has not opened yet.';
+  end if;
+  if not w.ungated and now() > w.closes_at then
+    raise exception 'This challenge has closed.';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists submissions_gate on public.submissions;
+create trigger submissions_gate before insert on public.submissions
+  for each row execute function public.submissions_gate();
+
+-- ---------------------------------------------------------------
 -- Make someone a Captain (run manually AFTER they have signed in once):
 --   update public.profiles set role = 'captain', team_name = 'Staff'
 --   where email = 'coach@example.com';

@@ -29,6 +29,7 @@ CI (`.github/workflows/ci.yml`) runs lint, tests and a build on every push.
 - `src/App.jsx` – session, data loading and action handlers
 - `src/lib/api.js` – all Supabase calls + mapping to the shapes the UI uses
 - `src/lib/scoring.js` – first-pass rubric check (keyword heuristic, **not AI**; captains review every score)
+- `src/lib/schedule.js` – presents the time-gate (the database `challenge_windows()` + `submissions_gate` trigger is the source of truth)
 - `src/lib/points.js` – league-points maths (weekly points + 10 per attended session, per-member team average)
 - `src/components/` – views (participant, leaderboard, badges, captain dashboard) and modals
 - `src/data/curriculum.js` – default 4-week challenge pack and teams

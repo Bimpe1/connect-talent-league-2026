@@ -1,4 +1,5 @@
 import { attendanceCount, ATTENDANCE_BONUS } from '../lib/points';
+import SchedulePanel from './SchedulePanel';
 import React, { useState } from 'react';
 import {
   Shield,
@@ -31,6 +32,10 @@ export default function CaptainDashboard({
   weeks,
   onUpdateChallenge,
   onResetChallenges,
+  schedule,
+  windows,
+  serverOffsetMs,
+  onSaveSchedule,
   onApproveSubmission,
   onAdjustScore,
   onToggleAttendance,
@@ -201,6 +206,17 @@ export default function CaptainDashboard({
           }`}
         >
           Award Recognition Badges
+        </button>
+
+        <button
+          onClick={() => setSection('schedule')}
+          className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
+            section === 'schedule'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+          }`}
+        >
+          Schedule
         </button>
 
         <button
@@ -742,6 +758,15 @@ export default function CaptainDashboard({
       {/* ============================================================== */}
       {/* SECTION 5: CHECKLIST                                           */}
       {/* ============================================================== */}
+
+      {section === 'schedule' && (
+        <SchedulePanel
+          schedule={schedule}
+          windows={windows}
+          serverOffsetMs={serverOffsetMs}
+          onSaveSchedule={onSaveSchedule}
+        />
+      )}
 
       {section === 'checklist' && (
         <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200 space-y-4 text-sm text-slate-700 leading-relaxed">

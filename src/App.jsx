@@ -19,6 +19,9 @@ export default function App() {
   const [participants, setParticipants] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [weeks, setWeeks] = useState(DEFAULT_WEEKS);
+  const [schedule, setSchedule] = useState(null); // time-gating settings (captain-editable)
+  const [windows, setWindows] = useState([]);       // per-day open/close instants from the database
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
   const [signinRequest, setSigninRequest] = useState(0);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [securityAlert, setSecurityAlert] = useState(null);
@@ -44,6 +47,9 @@ export default function App() {
       setParticipants(data.participants);
       setSubmissions(data.submissions);
       setWeeks(data.weeks || DEFAULT_WEEKS);
+      setSchedule(data.schedule);
+      setWindows(data.windows);
+      setServerOffsetMs(data.serverOffsetMs);
       // keep the signed-in user's own badges/attendance fresh
       const me = data.participants.find(p => p.id === user.id);
       if (me) setCurrentUser(u => (u ? { ...u, badges: me.badges, attendance: me.attendance } : u));
@@ -64,9 +70,10 @@ export default function App() {
       }
       try {
         const user = await api.fetchMyProfile(session.user.id);
+        // Load league data BEFORE showing the signed-in views, so they start on today's challenge
+        await refresh(user);
         setCurrentUser(user);
         setCurrentTab(user.role === 'captain' ? 'captain' : 'challenges');
-        await refresh(user);
       } catch (err) {
         showError(err);
       } finally {
@@ -122,17 +129,23 @@ export default function App() {
 
   const handleResetChallenges = () => captainAction(() => api.saveWeeks(null));
 
+  const handleSaveSchedule = (next) => captainAction(() => api.saveSchedule(next));
+
   // Participant Submit Challenge
   const handleSubmitChallenge = async (payload) => {
     if (!currentUser || isCaptain) {
       triggerSecurityViolation('Only enrolled participants can submit challenge evidence.');
-      return;
+      return false;
     }
     try {
       await api.insertSubmission(currentUser.id, payload, evaluateRubric(payload.submissionText));
       await refresh();
+      return true;
     } catch (err) {
+      // includes "This challenge has closed / not opened yet" from the database time gate
       showError(err, 'Could not save your submission. Please try again.');
+      await refresh();
+      return false;
     }
   };
 
@@ -221,6 +234,8 @@ export default function App() {
                 currentUser={currentUser}
                 submissions={submissions}
                 weeks={weeks}
+                windows={windows}
+                serverOffsetMs={serverOffsetMs}
                 onSubmitChallenge={handleSubmitChallenge}
               />
             )}
@@ -249,6 +264,10 @@ export default function App() {
                 weeks={weeks}
                 onUpdateChallenge={handleUpdateChallenge}
                 onResetChallenges={handleResetChallenges}
+                schedule={schedule}
+                windows={windows}
+                serverOffsetMs={serverOffsetMs}
+                onSaveSchedule={handleSaveSchedule}
                 onApproveSubmission={handleApproveSubmission}
                 onAdjustScore={handleAdjustScore}
                 onToggleAttendance={handleToggleAttendance}

@@ -17,22 +17,31 @@ import {
   Trophy,
   X,
   HelpCircle,
-  ShieldCheck
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 import { WEEKS as DEFAULT_WEEKS } from '../data/curriculum';
 import VoiceRecorder from './VoiceRecorder';
 import MediaUploader from './MediaUploader';
 import ChallengeMiniLab from './ChallengeMiniLab';
 import ConfettiEffect from './ConfettiEffect';
+import { useServerNow } from '../lib/useServerNow';
+import { indexWindows, windowKey, challengeState, currentSlot, formatWhen, formatTime, countdown } from '../lib/schedule';
 
 export default function ParticipantView({ 
   currentUser, 
   submissions, 
   weeks,
+  windows = [],
+  serverOffsetMs = 0,
   onSubmitChallenge
 }) {
-  const [selectedWeek, setSelectedWeek] = useState(1);
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  // Server-based clock (device clock + measured offset), refreshed every 30s
+  const nowMs = useServerNow(serverOffsetMs);
+  const winMap = indexWindows(windows);
+  // Open on today's challenge rather than always week 1 / Monday
+  const [selectedWeek, setSelectedWeek] = useState(() => currentSlot(windows, Date.now() + serverOffsetMs).week);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => currentSlot(windows, Date.now() + serverOffsetMs).dayIndex);
   const [submissionText, setSubmissionText] = useState('');
   const [inputMode, setInputMode] = useState('text'); // 'text', 'voice', 'media'
   const [attachedVoice, setAttachedVoice] = useState(null);
@@ -55,12 +64,17 @@ export default function ParticipantView({
     s => s.weekNumber === selectedWeek && s.challengeTitle === activeChallenge.title
   );
 
+  // Time gate for the selected challenge (the database enforces it too)
+  const activeWindow = winMap[windowKey(selectedWeek, activeChallenge.day)];
+  const gateState = challengeState(activeWindow, nowMs); // 'open' | 'upcoming' | 'closed' | 'locked'
+  const canSubmit = gateState === 'open';
+
   // Calculate current streak (number of challenges completed in this week)
   const completedInCurrentWeek = currentWeekData.challenges.filter(c =>
     mySubmissions.some(s => s.weekNumber === selectedWeek && s.challengeTitle === c.title)
   ).length;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!submissionText.trim() && !attachedVoice && !attachedMedia) {
       alert("Please enter a short answer, record a voice note, or attach a photo/drawing.");
@@ -80,7 +94,7 @@ export default function ParticipantView({
       fullSubmission += ` [Tested with a buddy]`;
     }
 
-    onSubmitChallenge({
+    const ok = await onSubmitChallenge({
       weekNumber: selectedWeek,
       challengeDay: activeChallenge.day,
       challengeTitle: activeChallenge.title,
@@ -91,6 +105,7 @@ export default function ParticipantView({
       isTeamMission: !!activeChallenge.isTeamMission,
       isReflection: !!activeChallenge.isReflection
     });
+    if (!ok) return; // e.g. the day closed while they were typing: keep their answer
 
     setLastSubmittedTitle(activeChallenge.title);
     setSubmissionText('');
@@ -165,6 +180,8 @@ export default function ParticipantView({
                 <span className="mt-1">
                   {isDone ? (
                     <CheckCircle2 size={14} className="text-emerald-400" />
+                  ) : ['upcoming', 'locked'].includes(challengeState(winMap[windowKey(selectedWeek, c.day)], nowMs)) ? (
+                    <Lock size={12} className="text-white/50" aria-label="Not open yet" />
                   ) : (
                     <span className="w-2 h-2 rounded-full bg-white/30 block" />
                   )}
@@ -218,6 +235,38 @@ export default function ParticipantView({
           </h2>
         </div>
 
+        {/* Time-gate status */}
+        {!existingSubmission && gateState === 'upcoming' && (
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm font-medium">
+            <Lock size={18} className="mt-0.5 flex-shrink-0" />
+            <span>
+              Opens <strong>{formatWhen(activeWindow.opensAt)}</strong> UK time (in {countdown(activeWindow.opensAt - nowMs)}).
+              You can read the challenge now and submit once it opens.
+            </span>
+          </div>
+        )}
+        {!existingSubmission && gateState === 'locked' && (
+          <div className="flex items-start gap-3 bg-slate-100 border border-slate-200 text-slate-700 rounded-2xl p-4 text-sm font-medium">
+            <Lock size={18} className="mt-0.5 flex-shrink-0" />
+            <span>This challenge is currently locked by your captain.</span>
+          </div>
+        )}
+        {!existingSubmission && gateState === 'closed' && (
+          <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 text-sm font-medium">
+            <Clock size={18} className="mt-0.5 flex-shrink-0" />
+            <span>
+              This challenge closed at <strong>{formatTime(activeWindow.closesAt)}</strong> UK time on {formatWhen(activeWindow.closesAt).split(',')[0]}.
+              Submissions are no longer accepted. Talk to your captain if you need help.
+            </span>
+          </div>
+        )}
+        {!existingSubmission && gateState === 'open' && activeWindow && !activeWindow.ungated && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2">
+            <Clock size={14} />
+            <span>Open now · closes at {formatTime(activeWindow.closesAt)} UK time ({countdown(activeWindow.closesAt - nowMs)} left)</span>
+          </div>
+        )}
+
         {/* Challenge Instructions Box */}
         <div className="space-y-3.5">
           <div className="border border-slate-200 bg-slate-50/70 rounded-2xl p-5 text-slate-800 text-base sm:text-lg leading-relaxed font-medium">
@@ -240,7 +289,7 @@ export default function ParticipantView({
         {/* ============================================================== */}
         {/* 3. INTERACTIVE CHALLENGE MINI-LAB                              */}
         {/* ============================================================== */}
-        {!existingSubmission && (
+        {!existingSubmission && canSubmit && (
           <ChallengeMiniLab
             challengeTitle={activeChallenge.title}
             onInsertIntoAnswer={(text) => {
@@ -267,7 +316,7 @@ export default function ParticipantView({
               {existingSubmission.submissionText}
             </p>
           </div>
-        ) : (
+        ) : !canSubmit ? null : (
           /* Response Form */
           <form onSubmit={handleSubmit} className="space-y-6 pt-1">
             

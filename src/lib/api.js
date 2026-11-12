@@ -67,12 +67,17 @@ export const fetchMyProfile = async (userId) => {
 
 // ---- Reads ------------------------------------------------------------
 export const fetchLeague = async (isCaptain) => {
-  const [lb, subs, cfg] = await Promise.all([
+  const t0 = Date.now();
+  const [lb, subs, cfg, wins, now] = await Promise.all([
     supabase.from('leaderboard').select('*'),
     supabase.from('submissions').select('*').order('created_at', { ascending: false }),
-    supabase.from('league_config').select('weeks').eq('id', 1).maybeSingle(),
+    supabase.from('league_config').select('weeks,schedule').eq('id', 1).maybeSingle(),
+    supabase.rpc('challenge_windows'),
+    supabase.rpc('server_now'),
   ]);
-  [lb, subs, cfg].forEach((r) => fail(r.error));
+  [lb, subs, cfg, wins, now].forEach((r) => fail(r.error));
+  // Offset between the server clock and this device's clock (so countdowns can't be fooled by a wrong phone clock)
+  const serverOffsetMs = new Date(now.data).getTime() - (t0 + Date.now()) / 2;
 
   let participants = lb.data;
   if (isCaptain) {
@@ -86,6 +91,17 @@ export const fetchLeague = async (isCaptain) => {
     participants,
     submissions: subs.data.map(toSubmission),
     weeks: cfg.data?.weeks ?? null,
+    schedule: cfg.data?.schedule ?? null,
+    serverOffsetMs,
+    windows: wins.data.map((w) => ({
+      weekNumber: w.week_number,
+      dayName: w.day_name,
+      dayDate: w.day_date,
+      opensAt: new Date(w.opens_at).getTime(),
+      closesAt: new Date(w.closes_at).getTime(),
+      ungated: w.ungated,
+      locked: w.locked,
+    })),
   };
 };
 
@@ -134,5 +150,10 @@ export const updateProfile = async (id, patch) => {
 
 export const saveWeeks = async (weeks) => {
   const { error } = await supabase.from('league_config').update({ weeks }).eq('id', 1);
+  fail(error);
+};
+
+export const saveSchedule = async (schedule) => {
+  const { error } = await supabase.from('league_config').update({ schedule }).eq('id', 1);
   fail(error);
 };

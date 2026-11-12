@@ -16,6 +16,17 @@ update public.profiles set role = 'captain', team_name = 'Staff'
 where email = 'coach@example.com';
 ```
 
+## Time-gated challenges
+Daily challenges (Mon-Fri) open at **09:00** and close at **20:00 UK time** on their date. Saturday team
+missions and Sunday reflections stay open. Participants can read a challenge early but can only submit
+while it is open. This is enforced by a database trigger using the server clock (changing a phone's clock
+does nothing); the on-screen lock and countdown are convenience only.
+
+Captains change it in the dashboard under **Schedule**: default open/close times, a global on/off switch, and
+per-day overrides (open all day, locked, or custom hours). It is stored in `league_config.schedule`.
+`schema.sql` is safe to re-run on an existing project to add this feature. Season dates come from
+`start_date` (Monday of week 1, default 2026-11-16).
+
 ## After week 4
 Delete personal data: `truncate public.profiles cascade;` then remove the users under
 Authentication -> Users (or delete the project).
