@@ -20,5 +20,7 @@ and `scenes` lists inside that file. **If the sign-up flow changes, edit those, 
 3. The site plays `public/connect-talent-league-walkthrough.mp4` and `.webm`.
 
 ## Voice
-The recorded file has captions but **no voice**. For a voice-over, record the narration lines (see
-`captions.srt` for the exact text and timing) in any video editor and add it to the MP4.
+The recorded file has captions but **no voice**. `voiceover-script.md` has the narration, line by line with the exact
+timings, and recording tips. The captions are those same words, so read it as written. If you change the wording,
+change the `CUES` in `walkthrough-source.html`, regenerate `captions.srt` / `captions.ass`, and re-run step 2 above
+(you do not need to re-record the animation, only re-burn the captions).
