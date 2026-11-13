@@ -24,3 +24,11 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Announcement sender: never commit credentials, the people list, or send logs
+email/.env
+email/recipients*.csv
+!email/recipients.example.csv
+email/unsubscribed*.csv
+email/sent-log.csv
+email/preview.html
