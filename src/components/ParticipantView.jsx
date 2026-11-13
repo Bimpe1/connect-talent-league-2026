@@ -91,6 +91,7 @@ export default function ParticipantView({
   const activeWindow = winMap[windowKey(selectedWeek, activeChallenge.day)];
   const gateState = challengeState(activeWindow, nowMs); // 'open' | 'upcoming' | 'closed' | 'locked'
   const canSubmit = gateState === 'open';
+  const closingSoon = canSubmit && activeWindow && !activeWindow.ungated && activeWindow.closesAt - nowMs <= 60 * 60000;
   // Attendance claims aren't bound to the daily window, but the week must have started
   const weekStart = winMap[windowKey(selectedWeek, 'Monday')];
   const weekStarted = !weekStart || nowMs >= weekStart.opensAt;
@@ -520,11 +521,37 @@ export default function ParticipantView({
       <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-sm border border-slate-200 space-y-5 sm:space-y-6">
         
         {/* Challenge Header */}
-        <div className="space-y-1.5 border-b border-slate-100 pb-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full">
-              {activeChallenge.day} Challenge · Max {activeChallenge.maxPoints} TP
-            </span>
+        <div className="space-y-2 border-b border-slate-100 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full">
+                {activeChallenge.day} Challenge · Max {activeChallenge.maxPoints} TP
+              </span>
+
+              {/* Timing status pill (server clock; the database enforces it) */}
+              <span className={`text-xs font-bold px-3 py-0.5 rounded-full flex items-center gap-1.5 border ${
+                gateState === 'locked' || gateState === 'closed'
+                  ? 'bg-rose-50 text-rose-800 border-rose-200'
+                  : gateState === 'upcoming'
+                  ? 'bg-amber-50 text-amber-900 border-amber-300'
+                  : closingSoon
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 animate-pulse'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+              }`}>
+                {gateState === 'locked' ? (
+                  <><Lock size={12} className="text-rose-600 flex-shrink-0" /><span>Locked by captain</span></>
+                ) : gateState === 'closed' ? (
+                  <><Lock size={12} className="text-rose-600 flex-shrink-0" /><span>Closed at {formatTime(activeWindow.closesAt)}</span></>
+                ) : gateState === 'upcoming' ? (
+                  <><Clock size={12} className="text-amber-600 flex-shrink-0" /><span>Opens {formatTime(activeWindow.opensAt)}</span></>
+                ) : closingSoon ? (
+                  <><Clock size={12} className="text-amber-600 flex-shrink-0" /><span>Closing soon · {countdown(activeWindow.closesAt - nowMs)} left</span></>
+                ) : (
+                  <><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /><span>{activeWindow && !activeWindow.ungated ? `Open until ${formatTime(activeWindow.closesAt)}` : 'Open all day'}</span></>
+                )}
+              </span>
+            </div>
+
             {existingSubmission && (
               <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                 <Check size={12} />
@@ -889,7 +916,7 @@ export default function ParticipantView({
           setShowHowToUseModal(false);
           try {
             localStorage.setItem(`ct_seen_guide_${currentUser?.id || 'guest'}`, 'true');
-          } catch {}
+          } catch { /* storage unavailable: the guide may show again */ }
         }}
       />
     </div>
