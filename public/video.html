@@ -404,7 +404,7 @@
     // 70-second full schedule
     const scenes = [
       { id: 'scene1', start: 0, end: 6, title: 'Workflow Overview', subtitle: 'From step-by-step registration to challenges, attendance, and leaderboards.' },
-      { id: 'scene2', start: 6, end: 32, title: 'Step-by-Step Registration', subtitle: 'Five straightforward steps: your details, then a sign-in link by email.' },
+      { id: 'scene2', start: 6, end: 32, title: 'Step-by-Step Registration', subtitle: 'Five straightforward steps to create your account.' },
       { id: 'scene3', start: 32, end: 43, title: 'Daily Challenge Arena', subtitle: 'Type, record voice, or upload a photo showing proof of your task.' },
       { id: 'scene4', start: 43, end: 49, title: 'Facilitator Review & Points', subtitle: 'Facilitator review awards up to 20 TP to your team.' },
       { id: 'scene5', start: 49, end: 58, title: 'In-Person Attendance Bonus', subtitle: 'Earn 10 extra points by attending weekly sessions in person.' },
@@ -415,10 +415,10 @@
     const CUES = [
       { id: 'intro', time: 0, text: "Welcome! Here is a quick workflow showing how the league works from registration to earning points." },
       { id: 'step1', time: 6, text: "Step one: enter your first name and last initial for the league board." },
-      { id: 'step2', time: 11, text: "Step two: enter your email address. We will email you a one-tap link to sign in, so there is no password to remember." },
-      { id: 'step3', time: 16, text: "Step three: choose whether you are joining as a learner or a volunteer." },
-      { id: 'step4', time: 21, text: "Step four: select your team with available spots." },
-      { id: 'step5', time: 26, text: "Step five: open the sign-in link we email you. A facilitator then approves your registration and you are in." },
+      { id: 'step2', time: 11, text: "Step two: enter your email address so you can securely sign in." },
+      { id: 'step3', time: 16, text: "Step three: create a password you can easily remember." },
+      { id: 'step4', time: 21, text: "Step four: choose whether you are joining as a learner or a volunteer." },
+      { id: 'step5', time: 26, text: "Step five: select your team with available spots and complete your registration." },
       { id: 'challenge', time: 32, text: "Every weekday, a short five-minute challenge appears. You can type your answer, record a voice note, or upload a photo showing proof of your task." },
       { id: 'review', time: 43, text: "Your facilitator reviews your effort and awards points. Every submission earns points for your team!" },
       { id: 'attendance', time: 49, text: "You can also claim ten bonus points each week by attending in person at the Connect Talent centre, confirmed by your facilitator." },
@@ -584,29 +584,29 @@
           if (stepText) stepText.textContent = 'Step 2 of 5 · Email Address';
           if (stepBadge) stepBadge.textContent = 'Step 2 of 5';
           if (stepQuestion) stepQuestion.textContent = 'What is your email address?';
-          if (stepSub) stepSub.textContent = 'We email you a one-tap sign-in link. No password needed.';
+          if (stepSub) stepSub.textContent = 'Used to securely sign into your account.';
           if (typedInput) typedInput.textContent = 'jordan@example.com';
         } else if (time < 21) {
           if (regProgress) regProgress.style.width = '60%';
-          if (stepText) stepText.textContent = 'Step 3 of 5 · Choose Your Role';
+          if (stepText) stepText.textContent = 'Step 3 of 5 · Create Password';
           if (stepBadge) stepBadge.textContent = 'Step 3 of 5';
+          if (stepQuestion) stepQuestion.textContent = 'Create a password';
+          if (stepSub) stepSub.textContent = 'Pick a password you can easily remember.';
+          if (typedInput) typedInput.textContent = '••••••••';
+        } else if (time < 26) {
+          if (regProgress) regProgress.style.width = '80%';
+          if (stepText) stepText.textContent = 'Step 4 of 5 · Choose Your Role';
+          if (stepBadge) stepBadge.textContent = 'Step 4 of 5';
           if (stepQuestion) stepQuestion.textContent = 'Select your role';
           if (stepSub) stepSub.textContent = 'Choose whether you are joining as a learner or a volunteer.';
           if (typedInput) typedInput.textContent = 'Selected: Learner';
-        } else if (time < 26) {
-          if (regProgress) regProgress.style.width = '80%';
-          if (stepText) stepText.textContent = 'Step 4 of 5 · Choose Your Team';
-          if (stepBadge) stepBadge.textContent = 'Step 4 of 5';
+        } else {
+          if (regProgress) regProgress.style.width = '100%';
+          if (stepText) stepText.textContent = 'Step 5 of 5 · Choose Your Team';
+          if (stepBadge) stepBadge.textContent = 'Step 5 of 5';
           if (stepQuestion) stepQuestion.textContent = 'Pick your team';
           if (stepSub) stepSub.textContent = 'Select an available team with open spaces.';
           if (typedInput) typedInput.textContent = 'Selected: Team Phoenix';
-        } else {
-          if (regProgress) regProgress.style.width = '100%';
-          if (stepText) stepText.textContent = 'Step 5 of 5 · Check Your Inbox';
-          if (stepBadge) stepBadge.textContent = 'Step 5 of 5';
-          if (stepQuestion) stepQuestion.textContent = 'Open your sign-in link';
-          if (stepSub) stepSub.textContent = 'An admin then approves your registration and you can start.';
-          if (typedInput) typedInput.textContent = 'Link sent to jordan@example.com';
         }
       }
 

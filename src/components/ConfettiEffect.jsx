@@ -5,7 +5,6 @@ export default function ConfettiEffect({ active, onComplete }) {
 
   useEffect(() => {
     if (!active) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { onComplete?.(); return; }
     const canvas = canvasRef.current;
     if (!canvas) return;
 

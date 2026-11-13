@@ -4,10 +4,10 @@ import { Play, Pause, RotateCcw, X, Trophy, Check, Sparkles, ArrowRight, ShieldC
 const CUES = [
   { id: 'intro', time: 0, text: "Welcome! Here is a quick workflow showing how the league works from registration to earning points." },
   { id: 'step1', time: 6, text: "Step one: enter your first name and last initial for the league board." },
-  { id: 'step2', time: 11, text: "Step two: enter your email address. We will email you a one-tap link to sign in, so there is no password to remember." },
-  { id: 'step3', time: 16, text: "Step three: choose whether you are joining as a learner or a volunteer." },
-  { id: 'step4', time: 21, text: "Step four: select your team with available spots." },
-  { id: 'step5', time: 26, text: "Step five: open the sign-in link we email you. A facilitator then approves your registration and you are in." },
+  { id: 'step2', time: 11, text: "Step two: enter your email address so you can securely sign in." },
+  { id: 'step3', time: 16, text: "Step three: create a password you can easily remember." },
+  { id: 'step4', time: 21, text: "Step four: choose whether you are joining as a learner or a volunteer." },
+  { id: 'step5', time: 26, text: "Step five: select your team with available spots and complete your registration." },
   { id: 'challenge', time: 32, text: "Every weekday, a short five-minute challenge appears. You can type your answer, record a voice note, or upload a photo showing proof of your task." },
   { id: 'review', time: 43, text: "Your facilitator reviews your effort and awards points. Every submission earns points for your team!" },
   { id: 'attendance', time: 49, text: "You can also claim ten bonus points each week by attending in person at the Connect Talent centre, confirmed by your facilitator." },
@@ -392,12 +392,12 @@ export default function MotionVideoModal({ isOpen, onClose, userName = 'Friend' 
             const stepData = currentTime < 11
               ? { title: 'Step 1 of 5 · Your Name', q: 'What is your name?', sub: 'Enter your first name and last initial for the league board.', val: 'Jordan T.', pct: 20 }
               : currentTime < 16
-              ? { title: 'Step 2 of 5 · Email Address', q: 'What is your email address?', sub: 'We email you a one-tap sign-in link. No password needed.', val: 'jordan@example.com', pct: 40 }
+              ? { title: 'Step 2 of 5 · Email Address', q: 'What is your email address?', sub: 'Used to securely sign into your account.', val: 'jordan@example.com', pct: 40 }
               : currentTime < 21
-              ? { title: 'Step 3 of 5 · Choose Your Role', q: 'Select your role', sub: 'Choose whether you are joining as a learner or a volunteer.', val: 'Selected: Learner', pct: 60 }
+              ? { title: 'Step 3 of 5 · Create Password', q: 'Create a password', sub: 'Pick a password you can easily remember.', val: '••••••••', pct: 60 }
               : currentTime < 26
-              ? { title: 'Step 4 of 5 · Choose Your Team', q: 'Pick your team', sub: 'Select an available team with open spaces.', val: 'Selected: Team Phoenix', pct: 80 }
-              : { title: 'Step 5 of 5 · Check Your Inbox', q: 'Open your sign-in link', sub: 'An admin then approves your registration and you can start.', val: 'Link sent to jordan@example.com', pct: 100 };
+              ? { title: 'Step 4 of 5 · Choose Your Role', q: 'Select your role', sub: 'Choose whether you are joining as a learner or a volunteer.', val: 'Selected: Learner', pct: 80 }
+              : { title: 'Step 5 of 5 · Choose Your Team', q: 'Pick your team', sub: 'Select an available team with open spaces.', val: 'Selected: Team Phoenix', pct: 100 };
 
             return (
               <div className="w-full max-w-md bg-white text-slate-900 rounded-3xl p-5 sm:p-6 shadow-2xl border border-purple-200 space-y-3.5 animate-in fade-in zoom-in-95 duration-500">
