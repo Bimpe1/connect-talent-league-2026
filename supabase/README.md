@@ -17,7 +17,7 @@
    Then, in the SQL editor:
 
 ```sql
-update public.profiles set role = 'captain', name = 'Coach Morgan', team_name = 'Staff', team_id = null
+update public.profiles set role = 'captain', status = 'approved', name = 'Coach Morgan', team_name = 'Staff', team_id = null
 where email = 'coach@example.com';
 ```
    Promoted captains don't appear on the leaderboard and don't count towards team places.
@@ -25,6 +25,12 @@ where email = 'coach@example.com';
    drawings and voice notes, with per-user folders. Check it exists under Storage.
 9. Edit the **Confirm signup** and **Magic Link** email templates (Authentication -> Email Templates) so the
    wording suits participants. New users get the first, returning users the second.
+
+## Registration approval
+New sign-ups start as **pending**. After opening their email link they see a "waiting for approval" screen, and
+the database blocks them from submitting or uploading anything until a captain approves them (Captain Dashboard,
+**Approvals** tab; there is also "Approve All"). Rejecting someone frees their team place and display name.
+Pending people do not appear on the leaderboard. Captains do not need approval.
 
 ## Things to know
 - A team place is taken when the sign-in link is **sent**, not when it is clicked. A mistyped email holds a

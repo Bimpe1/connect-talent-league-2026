@@ -11,7 +11,7 @@ npm install
 cp .env.example .env.local   # fill in your Supabase URL + anon key
 npm run dev
 ```
-Backend setup (database, auth, SMTP, creating captains): see [`supabase/README.md`](supabase/README.md).
+Backend setup (database, auth, SMTP, creating captains, approvals): see [`supabase/README.md`](supabase/README.md).
 Without the two env vars the app shows a "Supabase isn't configured" notice.
 
 ## Scripts

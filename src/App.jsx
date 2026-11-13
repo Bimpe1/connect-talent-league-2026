@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import Header from './components/Header';
 import EnrollmentView from './components/EnrollmentView';
+import PendingApprovalView from './components/PendingApprovalView';
 import { WEEKS as DEFAULT_WEEKS } from './data/curriculum';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import * as api from './lib/api';
@@ -17,6 +18,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null); // profile of the signed-in user
   const [requestedTab, setCurrentTab] = useState('challenges'); // 'challenges', 'leaderboard', 'badges', 'captain'
   const [participants, setParticipants] = useState([]);
+  const [registrations, setRegistrations] = useState([]); // captains: every sign-up incl. pending
   const [submissions, setSubmissions] = useState([]);
   const [weeks, setWeeks] = useState(DEFAULT_WEEKS);
   const [schedule, setSchedule] = useState(null); // time-gating settings (captain-editable)
@@ -45,14 +47,19 @@ export default function App() {
     try {
       const data = await api.fetchLeague(user.role === 'captain');
       setParticipants(data.participants);
+      setRegistrations(data.registrations);
       setSubmissions(data.submissions);
       setWeeks(data.weeks || DEFAULT_WEEKS);
       setSchedule(data.schedule);
       setWindows(data.windows);
       setServerOffsetMs(data.serverOffsetMs);
-      // keep the signed-in user's own badges/attendance fresh
+      // keep the signed-in user's own approval status, badges and attendance fresh
       const me = data.participants.find(p => p.id === user.id);
-      if (me) setCurrentUser(u => (u ? { ...u, badges: me.badges, attendance: me.attendance } : u));
+      let status = user.status;
+      if (user.role !== 'captain') {
+        try { status = (await api.fetchMyProfile(user.id)).status; } catch { /* keep the last known status */ }
+      }
+      setCurrentUser(u => (u ? { ...u, status, ...(me ? { badges: me.badges, attendance: me.attendance } : {}) } : u));
     } catch (err) {
       showError(err);
     }
@@ -128,6 +135,9 @@ export default function App() {
     });
 
   const handleResetChallenges = () => captainAction(() => api.saveWeeks(null));
+
+  const handleApproveParticipant = (id) => captainAction(() => api.setRegistrationStatus(id, 'approved'));
+  const handleRejectParticipant = (id) => captainAction(() => api.setRegistrationStatus(id, 'rejected'));
 
   const handleSaveSchedule = (next) => captainAction(() => api.saveSchedule(next));
 
@@ -220,6 +230,9 @@ export default function App() {
             initialTab={signinRequest ? 'signin' : 'enroll'}
             onOpenCaptainLogin={() => setSigninRequest(n => n + 1)}
           />
+        ) : !isCaptain && currentUser.status !== 'approved' ? (
+          /* Signed in, but an admin hasn't approved the registration yet */
+          <PendingApprovalView user={currentUser} onCheckAgain={() => refresh()} />
         ) : (
           /* User is Enrolled / Logged in */
           <Suspense fallback={<div className="py-10 text-center text-sm text-slate-500">Loading…</div>}>
@@ -257,6 +270,9 @@ export default function App() {
                 submissions={submissions}
                 participants={participants}
                 weeks={weeks}
+                registrations={registrations}
+                onApproveParticipant={handleApproveParticipant}
+                onRejectParticipant={handleRejectParticipant}
                 onUpdateChallenge={handleUpdateChallenge}
                 onResetChallenges={handleResetChallenges}
                 schedule={schedule}
@@ -287,9 +303,8 @@ export default function App() {
 
       {/* Footer on all pages */}
       <footer className="py-5 text-center text-xs sm:text-sm text-slate-500 border-t border-slate-200 bg-white">
-        <div className="max-w-4xl mx-auto px-4 flex items-center justify-center gap-1 font-medium">
-          <span>Built by</span>
-          <span className="font-bold text-slate-900">Adebimpe Adetoba</span>
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <span>Built by Adebimpe Adetoba</span>
         </div>
       </footer>
     </div>

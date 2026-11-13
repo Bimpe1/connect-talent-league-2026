@@ -11,13 +11,16 @@ create table if not exists public.profiles (
   name        text not null,
   kind        text not null default 'learner' check (kind in ('learner','volunteer')),
   role        text not null default 'participant' check (role in ('participant','captain')),
+  status      text not null default 'pending' check (status in ('pending','approved','rejected')), -- captain approves new sign-ups
   team_id     text,
   team_name   text,
   attendance  jsonb not null default '{"prep":true,"wk1":false,"wk2":false,"wk3":false,"wk4":false}',
   badges      text[] not null default '{ready_to_begin}',
   created_at  timestamptz not null default now()
 );
-create unique index if not exists profiles_name_unique on public.profiles (lower(trim(name)));
+drop index if exists public.profiles_name_unique;
+-- display names are unique among people who haven't been rejected
+create unique index profiles_name_unique on public.profiles (lower(trim(name))) where status <> 'rejected';
 
 create table if not exists public.submissions (
   id                uuid primary key default gen_random_uuid(),
@@ -72,6 +75,11 @@ language sql immutable as $$
     when 'spark' then 5 when 'talent_stars' then 6 when 'bridge' then 6 else null end;
 $$;
 
+create or replace function public.is_approved() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'participant' and status = 'approved');
+$$;
+
 -- Create a profile for every new auth user. Role is ALWAYS 'participant' here;
 -- promote captains manually (see bottom of file). Metadata comes from the sign-up form.
 create or replace function public.handle_new_user() returns trigger
@@ -85,7 +93,7 @@ begin
   end if;
   if cap is not null then
     perform pg_advisory_xact_lock(hashtext('team:' || tid));  -- serialise concurrent sign-ups per team
-    if (select count(*) from public.profiles where team_id = tid and role = 'participant') >= cap then
+    if (select count(*) from public.profiles where team_id = tid and role = 'participant' and status <> 'rejected') >= cap then
       raise exception 'Team is full';
     end if;
   end if;
@@ -175,7 +183,7 @@ select
   coalesce(sum((s.ai_score->>'total')::int) filter (where s.week_number = 4 and not s.is_attendance), 0)::int as wk4
 from public.profiles p
 left join public.submissions s on s.participant_id = p.id and s.status = 'approved'
-where p.role = 'participant'
+where p.role = 'participant' and p.status = 'approved'
 group by p.id;
 
 revoke all on public.leaderboard from anon;
@@ -206,7 +214,7 @@ create policy submissions_select on public.submissions for select
 drop policy if exists submissions_insert on public.submissions;
 create policy submissions_insert on public.submissions for insert
   with check (participant_id = auth.uid() and status = 'pending'
-              and not public.is_captain());
+              and public.is_approved());
 
 drop policy if exists submissions_update_captain on public.submissions;
 create policy submissions_update_captain on public.submissions for update
@@ -223,7 +231,7 @@ create policy config_update_captain on public.league_config for update
 -- Team seat counts for the enrolment screen (works before login, exposes counts only).
 create or replace function public.team_counts() returns table (team_id text, n bigint)
 language sql stable security definer set search_path = public as $$
-  select team_id, count(*) from public.profiles where role = 'participant' group by team_id;
+  select team_id, count(*) from public.profiles where role = 'participant' and status <> 'rejected' group by team_id;
 $$;
 grant execute on function public.team_counts() to anon, authenticated;
 
@@ -316,7 +324,7 @@ create trigger submissions_gate before insert on public.submissions
 -- form give a clear message instead of a generic sign-up failure.
 create or replace function public.name_taken(n text) returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.profiles where lower(trim(name)) = lower(trim(n)));
+  select exists (select 1 from public.profiles where lower(trim(name)) = lower(trim(n)) and status <> 'rejected');
 $$;
 grant execute on function public.name_taken(text) to anon, authenticated;
 
@@ -334,7 +342,7 @@ on conflict (id) do update
 
 drop policy if exists evidence_insert on storage.objects;
 create policy evidence_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'evidence' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (bucket_id = 'evidence' and (storage.foldername(name))[1] = auth.uid()::text and public.is_approved());
 
 drop policy if exists evidence_select on storage.objects;
 create policy evidence_select on storage.objects for select to authenticated

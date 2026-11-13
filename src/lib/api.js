@@ -33,6 +33,7 @@ const toUser = (p) => ({
   id: p.id,
   name: p.name,
   email: p.email,
+  status: p.role === 'captain' ? 'approved' : p.status, // 'pending' | 'approved' | 'rejected'
   role: p.role === 'captain' ? 'captain' : p.kind, // UI uses 'captain' | 'learner' | 'volunteer'
   teamId: p.team_id,
   teamName: p.team_name,
@@ -93,15 +94,25 @@ export const fetchLeague = async (isCaptain) => {
   const serverOffsetMs = new Date(now.data).getTime() - (t0 + Date.now()) / 2;
 
   let participants = lb.data;
+  let registrations = [];
   if (isCaptain) {
-    // Captains also get emails (RLS blocks everyone else from the profiles table).
-    const { data, error } = await supabase.from('profiles').select('id,email');
+    // Captains also see every sign-up with its email and approval status (RLS blocks everyone else).
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id,name,email,kind,team_id,team_name,status,created_at')
+      .eq('role', 'participant')
+      .order('created_at', { ascending: true });
     fail(error);
-    const emails = Object.fromEntries(data.map((p) => [p.id, p.email]));
+    registrations = data.map((p) => ({
+      id: p.id, name: p.name, email: p.email, role: p.kind, teamId: p.team_id, teamName: p.team_name,
+      status: p.status, createdAt: p.created_at,
+    }));
+    const emails = Object.fromEntries(registrations.map((r) => [r.id, r.email]));
     participants = participants.map((p) => ({ ...p, email: emails[p.id] }));
   }
   return {
     participants,
+    registrations,
     submissions: subs.data.map(toSubmission),
     weeks: cfg.data?.weeks ?? null,
     schedule: cfg.data?.schedule ?? null,
@@ -217,3 +228,9 @@ export async function getEvidenceUrl(path) {
   fail(error);
   return data.signedUrl;
 }
+
+// Captain approves or rejects a new sign-up (rejecting frees their team place and display name).
+export const setRegistrationStatus = async (id, status) => {
+  const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
+  fail(error);
+};

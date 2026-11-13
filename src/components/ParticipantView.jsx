@@ -30,6 +30,7 @@ import ChallengeMiniLab from './ChallengeMiniLab';
 import ConfettiEffect from './ConfettiEffect';
 import { useServerNow } from '../lib/useServerNow';
 import { indexWindows, windowKey, challengeState, currentSlot, formatWhen, formatTime, countdown } from '../lib/schedule';
+import MotionVideoModal from './MotionVideoModal';
 
 export default function ParticipantView({ 
   currentUser, 
@@ -58,6 +59,15 @@ export default function ParticipantView({
   const [lastSubmittedTitle, setLastSubmittedTitle] = useState('');
   const [challengeFormError, setChallengeFormError] = useState('');
 
+  // Senior Walkthrough & How to Use Modal State (opens automatically on first visit)
+  const [showHowToUseModal, setShowHowToUseModal] = useState(() => {
+    try {
+      return !localStorage.getItem(`ct_seen_guide_${currentUser?.id || 'guest'}`);
+    } catch {
+      return false;
+    }
+  });
+
   // In-Person Attendance State
   const [attendanceDay, setAttendanceDay] = useState('Wednesday');
   const [attendanceText, setAttendanceText] = useState('');
@@ -81,6 +91,7 @@ export default function ParticipantView({
   const activeWindow = winMap[windowKey(selectedWeek, activeChallenge.day)];
   const gateState = challengeState(activeWindow, nowMs); // 'open' | 'upcoming' | 'closed' | 'locked'
   const canSubmit = gateState === 'open';
+  const closingSoon = canSubmit && activeWindow && !activeWindow.ungated && activeWindow.closesAt - nowMs <= 60 * 60000;
   // Attendance claims aren't bound to the daily window, but the week must have started
   const weekStart = winMap[windowKey(selectedWeek, 'Monday')];
   const weekStarted = !weekStart || nowMs >= weekStart.opensAt;
@@ -205,6 +216,16 @@ export default function ParticipantView({
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
+            {/* How to Use / Senior Guide Button */}
+            <button
+              type="button"
+              onClick={() => setShowHowToUseModal(true)}
+              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 border border-white/25 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition active:scale-95 shadow-2xs"
+            >
+              <HelpCircle size={15} className="text-amber-300" />
+              <span>How It Works</span>
+            </button>
+
             {/* Streak Counter */}
             <div className="flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold">
               <Flame size={16} className="text-amber-400 fill-amber-400 animate-pulse" />
@@ -306,7 +327,7 @@ export default function ParticipantView({
             ) : existingAttendanceSub ? (
               <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-800 bg-amber-50 border border-amber-300 px-3.5 py-1 rounded-full">
                 <Clock size={15} className="text-amber-600" />
-                <span>Pending Captain Review (+10 TP)</span>
+                <span>Pending Facilitator Review (+10 TP)</span>
               </span>
             ) : (
               <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
@@ -320,7 +341,7 @@ export default function ParticipantView({
           <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
             <CheckCircle2 className="text-emerald-600 flex-shrink-0" size={24} />
             <div className="text-xs sm:text-sm text-emerald-950 font-medium leading-relaxed">
-              <strong>Attendance Confirmed:</strong> Your physical in-person attendance for Week {selectedWeek} has been verified by the Captain. 10 Talent Points have been added to your score!
+              <strong>Attendance Confirmed:</strong> Your physical in-person attendance for Week {selectedWeek} has been verified by the Facilitator. 10 Talent Points have been added to your score!
             </div>
           </div>
         ) : existingAttendanceSub ? (
@@ -331,7 +352,7 @@ export default function ParticipantView({
                 <span>Evidence Submitted ({existingAttendanceSub.challengeDay || 'In-Person Session'})</span>
               </span>
               <span className="text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full text-[11px]">
-                In Captain Queue
+                In Facilitator Queue
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-700 bg-white p-3 rounded-xl border border-amber-100 whitespace-pre-wrap font-medium">
@@ -436,7 +457,7 @@ export default function ParticipantView({
                     rows={2}
                     value={attendanceText}
                     onChange={e => setAttendanceText(e.target.value)}
-                    placeholder={`e.g. Attended in-person on ${attendanceDay} with Coach Morgan at the centre...`}
+                    placeholder={`e.g. Attended in-person on ${attendanceDay} at the centre...`}
                     className="w-full border-2 border-slate-200 focus:border-[#6d28d9] focus:ring-2 focus:ring-purple-100 rounded-xl p-3 text-sm focus:outline-none bg-white font-medium"
                   />
                 )}
@@ -500,11 +521,37 @@ export default function ParticipantView({
       <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-sm border border-slate-200 space-y-5 sm:space-y-6">
         
         {/* Challenge Header */}
-        <div className="space-y-1.5 border-b border-slate-100 pb-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full">
-              {activeChallenge.day} Challenge · Max {activeChallenge.maxPoints} TP
-            </span>
+        <div className="space-y-2 border-b border-slate-100 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-blue-700 tracking-wider uppercase bg-blue-50 border border-blue-200 px-3 py-0.5 rounded-full">
+                {activeChallenge.day} Challenge · Max {activeChallenge.maxPoints} TP
+              </span>
+
+              {/* Timing status pill (server clock; the database enforces it) */}
+              <span className={`text-xs font-bold px-3 py-0.5 rounded-full flex items-center gap-1.5 border ${
+                gateState === 'locked' || gateState === 'closed'
+                  ? 'bg-rose-50 text-rose-800 border-rose-200'
+                  : gateState === 'upcoming'
+                  ? 'bg-amber-50 text-amber-900 border-amber-300'
+                  : closingSoon
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 animate-pulse'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+              }`}>
+                {gateState === 'locked' ? (
+                  <><Lock size={12} className="text-rose-600 flex-shrink-0" /><span>Locked by captain</span></>
+                ) : gateState === 'closed' ? (
+                  <><Lock size={12} className="text-rose-600 flex-shrink-0" /><span>Closed at {formatTime(activeWindow.closesAt)}</span></>
+                ) : gateState === 'upcoming' ? (
+                  <><Clock size={12} className="text-amber-600 flex-shrink-0" /><span>Opens {formatTime(activeWindow.opensAt)}</span></>
+                ) : closingSoon ? (
+                  <><Clock size={12} className="text-amber-600 flex-shrink-0" /><span>Closing soon · {countdown(activeWindow.closesAt - nowMs)} left</span></>
+                ) : (
+                  <><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /><span>{activeWindow && !activeWindow.ungated ? `Open until ${formatTime(activeWindow.closesAt)}` : 'Open all day'}</span></>
+                )}
+              </span>
+            </div>
+
             {existingSubmission && (
               <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                 <Check size={12} />
@@ -586,7 +633,7 @@ export default function ParticipantView({
             <div className="flex justify-between items-center border-b border-emerald-200 pb-3">
               <span className="text-sm font-bold text-emerald-900 flex items-center gap-2">
                 <CheckCircle2 size={18} className="text-emerald-600" />
-                Evidence Submitted to Captain
+                Evidence Submitted to Facilitator
               </span>
               <span className="text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-200/80 px-3 py-1 rounded-full">
                 {existingSubmission.status === 'approved' 
@@ -718,10 +765,10 @@ export default function ParticipantView({
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 text-xs sm:text-sm text-slate-700">
               <span className="font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider text-xs">
                 <ShieldCheck size={16} className="text-blue-600" />
-                Coach's Rubric Quality Tips:
+                Submission Quality Tips:
               </span>
               <p className="text-slate-500 text-xs">
-                Captains evaluate submissions individually based on effort, reasoning, and peer collaboration. For full marks, remember to:
+                Submissions are scored on effort, reasoning, and peer collaboration:
               </p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold pt-1">
                 <li className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
@@ -758,7 +805,7 @@ export default function ParticipantView({
                 className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-2xl text-base font-bold shadow-md shadow-indigo-950/20 transition active:scale-95 flex items-center justify-center gap-2"
               >
                 <Send size={18} />
-                <span>Submit Evidence to Captain</span>
+                <span>Submit Evidence to Facilitator</span>
               </button>
             </div>
           </form>
@@ -829,7 +876,7 @@ export default function ParticipantView({
                 Evidence Submitted!
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pt-1">
-                Great job completing <span className="font-bold text-slate-800">"{lastSubmittedTitle}"</span>. Your response has been placed in the Captain queue for review!
+                Great job completing <span className="font-bold text-slate-800">"{lastSubmittedTitle}"</span>. Your response has been placed in the Facilitator queue for review!
               </p>
             </div>
 
@@ -858,6 +905,20 @@ export default function ParticipantView({
           </div>
         </div>
       )}
+
+      {/* ============================================================== */}
+      {/* ANIMATED MOTION DESIGN VIDEO WALKTHROUGH MODAL                 */}
+      {/* ============================================================== */}
+      <MotionVideoModal
+        isOpen={showHowToUseModal}
+        userName={currentUser?.name}
+        onClose={() => {
+          setShowHowToUseModal(false);
+          try {
+            localStorage.setItem(`ct_seen_guide_${currentUser?.id || 'guest'}`, 'true');
+          } catch { /* storage unavailable: the guide may show again */ }
+        }}
+      />
     </div>
   );
 }
