@@ -1,0 +1,47 @@
+1
+00:00:00,200 --> 00:00:05,700
+Welcome! Here's how the league works, from sign-up to earning points.
+
+2
+00:00:06,200 --> 00:00:10,700
+Step one: enter your first name and last initial.
+
+3
+00:00:11,200 --> 00:00:15,700
+Step two: enter your email. No password: we email you a link.
+
+4
+00:00:16,200 --> 00:00:20,700
+Step three: tick the privacy box. Only facilitators can see your email.
+
+5
+00:00:21,200 --> 00:00:25,700
+Step four: choose learner or volunteer.
+
+6
+00:00:26,200 --> 00:00:31,700
+Step five: pick the team you'd like to join, then tap Complete Registration.
+
+7
+00:00:32,200 --> 00:00:37,700
+Finally, open the link we email you. A facilitator approves you, then you can start.
+
+8
+00:00:38,200 --> 00:00:48,700
+Every weekday, a short challenge appears: about five to fifteen minutes. Answer by typing, a voice note, or a photo.
+
+9
+00:00:49,200 --> 00:00:54,700
+Your facilitator reviews your effort and awards points for your team.
+
+10
+00:00:55,200 --> 00:01:03,700
+Claim ten bonus points each week by attending in person at the Connect Talent centre. Your facilitator confirms it.
+
+11
+00:01:04,200 --> 00:01:11,700
+Check the leaderboard any time to see your team's rank and individual scores.
+
+12
+00:01:12,200 --> 00:01:15,700
+That's the whole workflow. Have fun, and enjoy learning!

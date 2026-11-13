@@ -42,8 +42,6 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
   const [teamCounts, setTeamCounts] = useState({});
 
   const totalEnrolled = TEAMS.reduce((n, t) => n + (teamCounts[t.id] || 0), 0);
-  const totalCapacity = TEAMS.reduce((n, t) => n + t.capacity, 0);
-  const allTeamsFull = TEAMS.every(t => (teamCounts[t.id] || 0) >= t.capacity);
 
   useEffect(() => {
     fetchTeamCounts().then(setTeamCounts).catch(() => {});
@@ -150,14 +148,6 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
     const team = TEAMS.find(t => t.id === selectedTeamId);
     if (!team) {
       triggerEnrollError('Please select a valid team.');
-      return;
-    }
-
-    const currentCount = teamCounts[team.id] || 0;
-    if (currentCount >= team.capacity) {
-      triggerEnrollError(
-        `Team "${team.name}" has reached full capacity (${team.capacity}/${team.capacity} places filled). Please select another team with available places.`
-      );
       return;
     }
 
@@ -484,50 +474,36 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
                     Pick your team
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                    Select an available team with open spaces ({totalEnrolled}/{totalCapacity} spots taken).
+                    Choose the team you would like to join. There is no limit on team size{totalEnrolled > 0 ? ` (${totalEnrolled} ${totalEnrolled === 1 ? 'person has' : 'people have'} joined so far)` : ''}.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
                   {TEAMS.map(t => {
                     const enrolledCount = teamCounts[t.id] || 0;
-                    const isFull = enrolledCount >= t.capacity;
                     const isSelected = selectedTeamId === t.id;
 
                     return (
                       <button
                         key={t.id}
                         type="button"
-                        disabled={isFull}
-                        onClick={() => {
-                          if (!isFull) {
-                            setSelectedTeamId(t.id);
-                            setEnrollError('');
-                          }
-                        }}
+                        onClick={() => { setSelectedTeamId(t.id); setEnrollError(''); }}
                         className={`p-3.5 rounded-2xl border-2 text-left transition flex flex-col justify-between ${
-                          isFull
-                            ? 'border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-60'
-                            : isSelected
+                          isSelected
                             ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm ring-2 ring-purple-300'
                             : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-center justify-between w-full">
                           <span className="font-bold text-sm block">{t.name}</span>
-                          {isSelected && !isFull && (
+                          {isSelected && (
                             <span className="w-5 h-5 rounded-full bg-[#6d28d9] text-white flex items-center justify-center text-xs">
                               <Check size={12} />
                             </span>
                           )}
-                          {isFull && (
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">
-                              Full
-                            </span>
-                          )}
                         </div>
                         <span className="text-[11px] text-slate-400 mt-2">
-                          {enrolledCount}/{t.capacity} places {isFull ? '• Closed' : '• Open'}
+                          {enrolledCount} joined
                         </span>
                       </button>
                     );
@@ -592,10 +568,10 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
                 <button
                   type="button"
                   onClick={handleEnrollSubmit}
-                  disabled={sending || allTeamsFull}
+                  disabled={sending}
                   className="flex-1 py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span>{sending ? 'Sending Link...' : allTeamsFull ? 'League is Full' : 'Complete Registration 🎉'}</span>
+                  <span>{sending ? 'Sending Link...' : 'Complete Registration 🎉'}</span>
                 </button>
               )}
             </div>

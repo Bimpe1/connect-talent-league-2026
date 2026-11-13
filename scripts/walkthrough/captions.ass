@@ -1,0 +1,25 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Cap,Plus Jakarta Sans,30,&H00FFFFFF,&H00FFFFFF,&H99000000,&H99000000,-1,0,0,0,100,100,0,0,3,9,0,2,170,170,118,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.20,0:00:05.70,Cap,,0,0,0,,Welcome! Here's how the league works, from sign-up to earning points.
+Dialogue: 0,0:00:06.20,0:00:10.70,Cap,,0,0,0,,Step one: enter your first name and last initial.
+Dialogue: 0,0:00:11.20,0:00:15.70,Cap,,0,0,0,,Step two: enter your email. No password: we email you a link.
+Dialogue: 0,0:00:16.20,0:00:20.70,Cap,,0,0,0,,Step three: tick the privacy box. Only facilitators can see your email.
+Dialogue: 0,0:00:21.20,0:00:25.70,Cap,,0,0,0,,Step four: choose learner or volunteer.
+Dialogue: 0,0:00:26.20,0:00:31.70,Cap,,0,0,0,,Step five: pick the team you'd like to join, then tap Complete Registration.
+Dialogue: 0,0:00:32.20,0:00:37.70,Cap,,0,0,0,,Finally, open the link we email you. A facilitator approves you, then you can start.
+Dialogue: 0,0:00:38.20,0:00:48.70,Cap,,0,0,0,,Every weekday, a short challenge appears: about five to fifteen minutes. Answer by typing, a voice note, or a photo.
+Dialogue: 0,0:00:49.20,0:00:54.70,Cap,,0,0,0,,Your facilitator reviews your effort and awards points for your team.
+Dialogue: 0,0:00:55.20,0:01:03.70,Cap,,0,0,0,,Claim ten bonus points each week by attending in person at the Connect Talent centre. Your facilitator confirms it.
+Dialogue: 0,0:01:04.20,0:01:11.70,Cap,,0,0,0,,Check the leaderboard any time to see your team's rank and individual scores.
+Dialogue: 0,0:01:12.20,0:01:15.70,Cap,,0,0,0,,That's the whole workflow. Have fun, and enjoy learning!

@@ -1,0 +1,30 @@
+Hi {{first_name}},
+
+The Connect Talent League 2026 starts on Monday 16 November: four weeks of short daily challenges that build digital and critical-thinking skills, with points for you and your team. Learners and volunteers are both welcome.
+
+WATCH THE QUICK WALKTHROUGH
+{{video_url}}
+
+HOW TO JOIN (about 5 minutes)
+1. Open {{signup_url}} on your phone or computer.
+2. Choose "Enroll as New". Enter your first name and last initial and your email, and tick the privacy box.
+3. Choose Learner or Volunteer, then pick the team you would like to join.
+4. We email you a sign-in link. Tap it, no password needed. If it does not arrive, check your spam folder.
+5. A facilitator approves your registration, and then you can start.
+
+To come back later, choose "Returning Sign-In" and use the same email.
+
+HOW IT WORKS
+- Each weekday a short challenge (5 to 15 minutes) opens at 9:00am and closes at 8:00pm UK time. You can answer by typing, a voice note or a photo.
+- Team missions on Saturdays and reflections on Sundays stay open all day.
+- Claim 10 bonus points each week for attending in person.
+- Results are announced on Sundays at 7pm. The league runs until 13 December.
+
+There is no limit on team size, so join the team you like best. {{deadline_sentence}}Questions? Contact {{contact}}.
+
+Thank you,
+Connect Talent CIO
+
+--
+You are receiving this because you are part of the Connect Talent network. If you would prefer not to hear from us, reply to this email with "unsubscribe" (or write to {{unsubscribe_email}}) and we will remove you.
+{{charity_footer}}
