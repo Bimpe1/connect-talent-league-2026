@@ -136,7 +136,16 @@ export default function App() {
 
   const handleResetChallenges = () => captainAction(() => api.saveWeeks(null));
 
-  const handleApproveParticipant = (id) => captainAction(() => api.setRegistrationStatus(id, 'approved'));
+  const handleApproveParticipant = (id) =>
+    captainAction(async () => {
+      await api.setRegistrationStatus(id, 'approved');
+      // The approval is saved either way; if the email can't go out, say so instead of failing silently.
+      try {
+        await api.notifyApproved(id);
+      } catch (err) {
+        triggerSecurityViolation(`Approved, but the email could not be sent (${err.message}) Please let them know yourself.`);
+      }
+    });
   const handleRejectParticipant = (id) => captainAction(() => api.setRegistrationStatus(id, 'rejected'));
 
   const handleSaveSchedule = (next) => captainAction(() => api.saveSchedule(next));

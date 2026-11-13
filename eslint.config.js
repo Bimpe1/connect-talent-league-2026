@@ -32,6 +32,11 @@ export default [
     languageOptions: { sourceType: 'module', globals: { ...globals.node } },
   },
   {
+    // Server functions (Vercel): Node runtime
+    files: ['api/**/*.js'],
+    languageOptions: { sourceType: 'module', globals: { ...globals.node } },
+  },
+  {
     // One-off CommonJS scripts (e.g. the walkthrough recorder)
     files: ['scripts/**/*.cjs'],
     languageOptions: { sourceType: 'commonjs', globals: { ...globals.node, ...globals.browser } }, // also runs code inside a browser page

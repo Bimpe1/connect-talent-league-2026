@@ -32,6 +32,31 @@ the database blocks them from submitting or uploading anything until a captain a
 **Approvals** tab; there is also "Approve All"). Rejecting someone frees their display name.
 Pending people do not appear on the leaderboard. Captains do not need approval.
 
+## Approval emails ("You're approved")
+When a facilitator clicks **Approve** (or **Approve All**), the person gets an email telling them they can start and how
+to sign in. This is sent by a small server function (`api/notify-approved.js`), not by the browser, and it is strict:
+it only works for a signed-in **facilitator**, only for someone **already approved**, only to the address saved on their
+profile, and **at most once per person**. If the email cannot be sent, the approval is still saved and the facilitator
+is told, so they can let the person know themselves. Rejections send no email.
+
+**Setup** (Vercel, Project Settings, Environment Variables; set for Production, mark the password as *Sensitive*,
+then redeploy):
+
+| Name | Value |
+|---|---|
+| `SMTP_HOST` | `box5186.bluehost.com` (or your mail server) |
+| `SMTP_PORT` | `465` |
+| `SMTP_USER` | the mailbox address, e.g. `notifications@connect-talent.org` |
+| `SMTP_PASS` | that mailbox's password |
+| `SMTP_FROM_NAME` | optional, defaults to `Connect Talent CIO` |
+| `SMTP_REPLY_TO` | optional, defaults to the mailbox address |
+| `SITE_URL` | optional, defaults to `https://connect-talent-league-2026.vercel.app` |
+
+Run the latest `schema.sql` first: it adds the `approval_emailed_at` column that stops anyone being emailed twice.
+The existing `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` variables are reused. To try it on your computer use
+`vercel dev` (the normal `npm run dev` does not run server functions). Use the same mailbox as the sign-in emails: it is
+already known to deliver.
+
 ## Things to know
 - **There is no limit on team size.** Anyone can join the team of their choice; team scores use a per-member average so
   teams of different sizes compete fairly.

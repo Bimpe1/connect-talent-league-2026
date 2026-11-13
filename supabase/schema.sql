@@ -12,6 +12,7 @@ create table if not exists public.profiles (
   kind        text not null default 'learner' check (kind in ('learner','volunteer')),
   role        text not null default 'participant' check (role in ('participant','captain')),
   status      text not null default 'pending' check (status in ('pending','approved','rejected')), -- captain approves new sign-ups
+  approval_emailed_at timestamptz,                                                              -- set once the 'you're approved' email has been sent
   team_id     text,
   team_name   text,
   attendance  jsonb not null default '{"prep":true,"wk1":false,"wk2":false,"wk3":false,"wk4":false}',
@@ -25,6 +26,8 @@ create table if not exists public.profiles (
 alter table public.profiles add column if not exists status text not null default 'approved'
   check (status in ('pending','approved','rejected'));
 alter table public.profiles alter column status set default 'pending';
+-- Records that the approval email went out, so nobody is emailed twice (added after the first launch).
+alter table public.profiles add column if not exists approval_emailed_at timestamptz;
 
 drop index if exists public.profiles_name_unique;
 -- display names are unique among people who haven't been rejected
