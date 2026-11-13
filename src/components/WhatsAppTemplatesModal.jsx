@@ -79,8 +79,8 @@ Prize collection: Thursday session at the hub or via buddy drop-off.
               <Share2 size={20} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">WhatsApp Broadcast Generator</h3>
-              <p className="text-xs text-slate-500 font-medium">Official message templates from Page 10 of the pack</p>
+              <h3 className="text-lg font-bold text-slate-900">WhatsApp Broadcast</h3>
+              <p className="text-xs text-slate-500 font-medium">Copy ready-to-share message templates</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1">

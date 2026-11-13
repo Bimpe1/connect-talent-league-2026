@@ -713,10 +713,10 @@ export default function ParticipantView({
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 text-xs sm:text-sm text-slate-700">
               <span className="font-bold text-slate-900 flex items-center gap-1.5 uppercase tracking-wider text-xs">
                 <ShieldCheck size={16} className="text-blue-600" />
-                Coach's Rubric Quality Tips:
+                Submission Quality Tips:
               </span>
               <p className="text-slate-500 text-xs">
-                Captains evaluate submissions individually based on effort, reasoning, and peer collaboration. For full marks, remember to:
+                Submissions are scored on effort, reasoning, and peer collaboration:
               </p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold pt-1">
                 <li className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">

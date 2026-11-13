@@ -238,8 +238,8 @@ export default function CaptainDashboard({
             Captain Dashboard
           </h2>
 
-          <p className="text-sm sm:text-base text-slate-600 font-medium">
-            Set challenges, verify participant evidence, record attendance, and export Sunday announcements.
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            Review submissions, approve players, and manage challenges.
           </p>
         </div>
 
@@ -361,7 +361,7 @@ export default function CaptainDashboard({
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                  For transparency and verification, newly enrolled players must be approved by a Team Captain before they can log in and submit challenges.
+                  Approve newly registered players so they can sign in.
                 </p>
               </div>
 
@@ -395,7 +395,7 @@ export default function CaptainDashboard({
                   No Pending Registrations
                 </h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  All players who registered have been approved and can log in normally. New player enrollments will appear here for review.
+                  All registered players are approved.
                 </p>
               </div>
             ) : (
@@ -469,7 +469,7 @@ export default function CaptainDashboard({
                             className="flex-1 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
                           >
                             <Check size={14} />
-                            <span>Approve & Enable Login</span>
+                            <span>Approve</span>
                           </button>
 
                           <button
@@ -498,7 +498,7 @@ export default function CaptainDashboard({
                   Approved Active Players ({approvedParticipants.length})
                 </h4>
                 <p className="text-xs text-slate-500 font-medium">
-                  Verified players currently active and permitted to sign in to the app.
+                  Active players permitted to sign in.
                 </p>
               </div>
               <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
@@ -565,7 +565,7 @@ export default function CaptainDashboard({
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                  Set the daily opening and closing hours. To unlock or lock immediately, simply change the open or close time manually below.
+                  Set daily opening and closing hours for challenge submissions.
                 </p>
               </div>
 
@@ -594,8 +594,8 @@ export default function CaptainDashboard({
                     className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 focus:border-[#6d28d9] focus:outline-none bg-white"
                     required
                   />
-                  <span className="text-[11px] text-slate-500 block">
-                    Challenges unlock for submissions at this time each morning (e.g. {formatTimeDisplay(openTimeInput)}).
+                  <span className="text-[11px] text-slate-400 block">
+                    Unlocks daily at {formatTimeDisplay(openTimeInput)}.
                   </span>
                 </div>
 
@@ -610,17 +610,15 @@ export default function CaptainDashboard({
                     className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 focus:border-[#6d28d9] focus:outline-none bg-white"
                     required
                   />
-                  <span className="text-[11px] text-slate-500 block">
-                    Challenges lock for submissions at this time each evening (e.g. {formatTimeDisplay(closeTimeInput)}).
+                  <span className="text-[11px] text-slate-400 block">
+                    Locks daily at {formatTimeDisplay(closeTimeInput)}.
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-purple-50/60 border border-purple-100 rounded-xl text-xs text-slate-600 flex items-center gap-2">
-                <Clock size={15} className="text-[#6d28d9] flex-shrink-0" />
-                <span>
-                  <strong>Manual Lock / Unlock:</strong> To open immediately, set Open Time to earlier than now. To lock immediately, set Close Time to earlier than now.
-                </span>
+              <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
+                <Clock size={13} className="text-purple-600 flex-shrink-0" />
+                <span>Tip: To unlock or lock right away, adjust the time past the current hour.</span>
               </div>
 
               <div className="flex justify-end pt-1">
@@ -647,8 +645,8 @@ export default function CaptainDashboard({
                     {participants.length} Total Enrolled
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                  Roster of all registered learners and mentors across all league teams.
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Participants across all teams.
                 </p>
               </div>
             </div>
@@ -657,7 +655,7 @@ export default function CaptainDashboard({
             <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                  League Participants Roster:
+                  Participants:
                 </span>
                 <span className="text-xs font-semibold text-purple-800">
                   {participants.filter(p => p.email && p.email.trim()).length} of {participants.length} have email on file
@@ -770,7 +768,7 @@ export default function CaptainDashboard({
               </h3>
 
               <p className="text-xs sm:text-sm text-slate-500">
-                Create or modify challenges for any day. Changes update immediately for all participants.
+                Edit challenges for any day. Updates publish immediately.
               </p>
             </div>
 
@@ -780,7 +778,7 @@ export default function CaptainDashboard({
               className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition w-full sm:w-auto justify-center"
             >
               <RotateCcw size={13} />
-              <span>Reset to Default Pack</span>
+              <span>Reset to Defaults</span>
             </button>
           </div>
 
@@ -788,7 +786,7 @@ export default function CaptainDashboard({
           {showResetConfirm && (
             <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-2">
               <p className="text-xs sm:text-sm text-amber-900 font-semibold">
-                Reset all challenges to the official Connect Talent 2026 Curriculum? Any custom edits will be restored to defaults.
+                Reset all challenges to curriculum defaults? Custom edits will be overwritten.
               </p>
               <div className="flex gap-2">
                 <button
@@ -922,14 +920,14 @@ export default function CaptainDashboard({
 
             <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Instructions (What participants do)
+                Instructions
               </label>
 
               <textarea
                 rows={3}
                 value={formInstructions}
                 onChange={e => setFormInstructions(e.target.value)}
-                placeholder="Give clear, step-by-step guidance for the daily challenge..."
+                placeholder="Step-by-step instructions for the challenge..."
                 className="w-full border border-slate-300 rounded-xl p-3.5 text-sm text-slate-800 leading-relaxed focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 required
               />
@@ -937,21 +935,21 @@ export default function CaptainDashboard({
 
             <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Explain Your Thinking Prompt
+                Thinking Prompt
               </label>
 
               <textarea
                 rows={2}
                 value={formThinkingPrompt}
                 onChange={e => setFormThinkingPrompt(e.target.value)}
-                placeholder="What helped you decide? What might you check or change?..."
+                placeholder="What helped you decide? What might you check or change?"
                 className="w-full border border-slate-300 rounded-xl p-3.5 text-sm text-slate-800 leading-relaxed focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Week {editWeekNum} Critical Thinking Focus
+                Critical Thinking Focus
               </label>
 
               <input
@@ -1190,8 +1188,8 @@ export default function CaptainDashboard({
       {section === 'badges' && (
         <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200 space-y-4">
 
-          <div className="text-sm text-slate-600 font-medium border-b border-slate-100 pb-3">
-            Award recognition badges for considerate help, kindness, and peer support.
+          <div className="text-xs sm:text-sm text-slate-500 font-medium border-b border-slate-100 pb-3">
+            Award badges for kindness, teamwork, and peer support.
           </div>
 
           <div className="divide-y divide-slate-200 text-sm">
@@ -1253,22 +1251,12 @@ export default function CaptainDashboard({
             Weekly Rhythm Checklist
           </h4>
 
-          <ul className="list-disc pl-5 space-y-2 text-slate-600">
-            <li>
-              Post one daily challenge each weekday morning (5–15 mins).
-            </li>
-            <li>
-              Paper, verbal, and WhatsApp routes carry equal points.
-            </li>
-            <li>
-              Supported completion earns full points when ideas are the participant's own.
-            </li>
-            <li>
-              Submit scores by 6pm Sunday; publish results at 7pm.
-            </li>
-            <li>
-              Participants can query a score privately within 48 hours for a second captain review.
-            </li>
+          <ul className="list-disc pl-5 space-y-1.5 text-slate-600 text-xs sm:text-sm">
+            <li>Post daily challenges each weekday morning (5–15 mins).</li>
+            <li>Paper, voice notes, and text submissions carry equal points.</li>
+            <li>Supported completion earns full points when ideas are the participant's own.</li>
+            <li>Submit scores by 6pm Sunday; publish results at 7pm.</li>
+            <li>Participants may query a score within 48 hours.</li>
           </ul>
 
         </div>
