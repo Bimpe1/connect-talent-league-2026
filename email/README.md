@@ -19,6 +19,11 @@ It is safe by default. With no extra options it only checks the list and writes 
 5. Check email authentication for connect-talent.org (Bluehost cPanel, Email Deliverability: SPF and DKIM should
    both show valid). Without this, many messages will go to spam.
 
+## Before you send anything
+Make sure the **latest version of the app is live** and the **database upgrade has been run** (`supabase/schema.sql`):
+the email tells people they can join the team of their choice and links to the walkthrough video on the site.
+Open the video link yourself first.
+
 ## Your list
 A CSV file with a header row, saved as `email/recipients.csv` (see `recipients.example.csv`):
 

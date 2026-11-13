@@ -17,7 +17,6 @@ const config = {
   unsubscribe_email: 'stop@example.org',
   video_url: 'https://example.org/video',
   signup_url: 'https://example.org/join',
-  places: '40',
   deadline: '',
   contact: 'Pat',
   charity_footer: 'Example charity 123.',

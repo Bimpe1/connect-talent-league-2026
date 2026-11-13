@@ -8,7 +8,7 @@ WATCH THE QUICK WALKTHROUGH
 HOW TO JOIN (about 5 minutes)
 1. Open {{signup_url}} on your phone or computer.
 2. Choose "Enroll as New". Enter your first name and last initial and your email, and tick the privacy box.
-3. Choose Learner or Volunteer, then pick a team that still has places.
+3. Choose Learner or Volunteer, then pick the team you would like to join.
 4. We email you a sign-in link. Tap it, no password needed. If it does not arrive, check your spam folder.
 5. A facilitator approves your registration, and then you can start.
 
@@ -20,7 +20,7 @@ HOW IT WORKS
 - Claim 10 bonus points each week for attending in person.
 - Results are announced on Sundays at 7pm. The league runs until 13 December.
 
-Places are limited ({{places}} in total), so please register soon. {{deadline_sentence}}Questions? Contact {{contact}}.
+There is no limit on team size, so join the team you like best. {{deadline_sentence}}Questions? Contact {{contact}}.
 
 Thank you,
 Connect Talent CIO
