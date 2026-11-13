@@ -1,3 +1,4 @@
+import { attendanceCount, totalPoints, ATTENDANCE_BONUS } from '../lib/points';
 import React, { useState } from 'react';
 import { Trophy, Users, User, Sparkles } from 'lucide-react';
 import { TEAMS } from '../data/curriculum';
@@ -6,21 +7,11 @@ export default function LeaderboardView({ participants }) {
   const [activeTab, setActiveTab] = useState('teams'); // 'teams' or 'individuals'
 
   // Calculate Individual Totals
-  const individualsWithCalculations = (participants || []).map((p) => {
-    const attendanceCount = (p.attendance?.wk1 ? 1 : 0) +
-                            (p.attendance?.wk2 ? 1 : 0) +
-                            (p.attendance?.wk3 ? 1 : 0) +
-                            (p.attendance?.wk4 ? 1 : 0);
-    const attendanceBonus = attendanceCount * 10;
-    const weeklyNonAttendanceSum = (p.wk1 || 0) + (p.wk2 || 0) + (p.wk3 || 0) + (p.wk4 || 0);
-    const totalTP = weeklyNonAttendanceSum + attendanceBonus;
-
-    return {
-      ...p,
-      attendanceBonus,
-      totalTP
-    };
-  });
+  const individualsWithCalculations = (participants || []).map((p) => ({
+    ...p,
+    attendanceBonus: attendanceCount(p) * ATTENDANCE_BONUS,
+    totalTP: totalPoints(p),
+  }));
 
   const sortedIndividuals = [...individualsWithCalculations].sort((a, b) => b.totalTP - a.totalTP);
 

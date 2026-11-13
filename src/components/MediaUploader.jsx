@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, PenTool, Upload, Trash2, Check, RefreshCw } from 'lucide-react';
+import { compressImage } from '../lib/media';
 
 export default function MediaUploader({ onMediaAttached, onMediaRemoved }) {
   const [mode, setMode] = useState('upload'); // 'upload' or 'draw'
@@ -12,20 +13,21 @@ export default function MediaUploader({ onMediaAttached, onMediaRemoved }) {
   const [brushColor, setBrushColor] = useState('#1e3a8a');
   const [hasDrawn, setHasDrawn] = useState(false);
 
-  const handleFileUpload = (e) => {
+  const [uploadError, setUploadError] = useState('');
+
+  // Photos are shrunk to <=1280px JPEG before upload (keeps files small and fast on mobile data)
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target.result;
+    setUploadError('');
+    try {
+      const dataUrl = await compressImage(file);
       setPreviewUrl(dataUrl);
       setMediaInfo({ name: file.name, type: 'photo' });
-      if (onMediaAttached) {
-        onMediaAttached({ type: 'photo', dataUrl, name: file.name });
-      }
-    };
-    reader.readAsDataURL(file);
+      onMediaAttached?.({ type: 'photo', dataUrl, name: file.name });
+    } catch (err) {
+      setUploadError(err.message || 'Could not use that photo.');
+    }
   };
 
   useEffect(() => {
@@ -87,9 +89,9 @@ export default function MediaUploader({ onMediaAttached, onMediaRemoved }) {
   const attachDrawing = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // white background, so JPEG is much smaller than PNG
     setPreviewUrl(dataUrl);
-    setMediaInfo({ name: 'Hand-drawn Poster.png', type: 'drawing' });
+    setMediaInfo({ name: 'Hand-drawn Poster.jpg', type: 'drawing' });
     if (onMediaAttached) {
       onMediaAttached({ type: 'drawing', dataUrl, name: 'Hand-drawn poster' });
     }
@@ -152,6 +154,9 @@ export default function MediaUploader({ onMediaAttached, onMediaRemoved }) {
               <span className="text-sm font-bold text-slate-800">Click to choose a photo or drawing</span>
               <span className="text-xs text-slate-400 mt-0.5">PNG, JPG, or WEBP</span>
               <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              {uploadError && (
+                <span role="alert" className="mt-2 text-xs text-rose-700 font-medium">{uploadError}</span>
+              )}
             </label>
           ) : (
             <div className="bg-white rounded-2xl p-4 border border-slate-200 space-y-3">
