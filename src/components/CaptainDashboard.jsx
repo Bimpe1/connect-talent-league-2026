@@ -1,3 +1,5 @@
+import SchedulePanel from './SchedulePanel';
+import { EvidenceImage, EvidenceAudio } from './EvidenceMedia';
 import React, { useState } from 'react';
 import {
   Shield,
@@ -50,9 +52,12 @@ export default function CaptainDashboard({
   onRejectParticipant,
   onUpdateChallenge,
   onResetChallenges,
+  schedule,
+  windows,
+  serverOffsetMs,
+  onSaveSchedule,
   onApproveSubmission,
   onAdjustScore,
-  onToggleAttendance,
   onAwardBadge,
   onOpenWhatsAppModal
 }) {
@@ -243,6 +248,23 @@ export default function CaptainDashboard({
           </p>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+            const rows = [['name', 'email', 'team', 'role'], ...participants.map(p => [p.name, p.email, p.teamName, p.role])];
+            const blob = new Blob([rows.map(r => r.map(esc).join(',')).join('\n')], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'league-participants.csv';
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }}
+          className="px-5 py-2.5 bg-white hover:bg-slate-50 text-[#0a2558] border border-slate-300 rounded-xl text-sm font-bold"
+        >
+          Export emails (CSV)
+        </button>
         <button
           onClick={onOpenWhatsAppModal}
           className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition active:scale-95"
@@ -250,6 +272,7 @@ export default function CaptainDashboard({
           <Share2 size={15} />
           <span>WhatsApp Broadcast</span>
         </button>
+        </div>
       </div>
 
       {/* Navigation Pills */}
@@ -324,6 +347,17 @@ export default function CaptainDashboard({
         >
           <Award size={14} />
           <span className="truncate">Badges</span>
+        </button>
+
+        <button
+          onClick={() => setSection('schedule')}
+          className={`px-5 py-2 rounded-xl text-sm font-bold transition border ${
+            section === 'schedule'
+              ? 'bg-gradient-to-r from-[#0a2558] to-[#6d28d9] text-white border-transparent shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+          }`}
+        >
+          Schedule
         </button>
 
         <button
@@ -1043,32 +1077,24 @@ export default function CaptainDashboard({
                   </div>
 
                   {/* Audio */}
-                  {sub.attachedVoice?.url && (
+                  {sub.attachedVoice?.path && (
                     <div className="bg-rose-50/70 p-4 rounded-xl border border-rose-200 space-y-1.5">
                       <span className="text-xs sm:text-sm font-bold text-rose-900 block">
                         Recorded Voice Note Audio:
                       </span>
 
-                      <audio
-                        src={sub.attachedVoice.url}
-                        controls
-                        className="w-full h-9"
-                      />
+                      <EvidenceAudio path={sub.attachedVoice.path} />
                     </div>
                   )}
 
                   {/* Image/Drawing */}
-                  {sub.attachedMedia?.dataUrl && (
+                  {sub.attachedMedia?.path && (
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
                       <span className="text-xs sm:text-sm font-bold text-slate-700 block">
                         Attached Visual Evidence:
                       </span>
 
-                      <img
-                        src={sub.attachedMedia.dataUrl}
-                        alt="Visual evidence"
-                        className="max-h-56 rounded-lg border border-slate-300 mx-auto"
-                      />
+                      <EvidenceImage path={sub.attachedMedia.path} />
                     </div>
                   )}
 
@@ -1243,6 +1269,15 @@ export default function CaptainDashboard({
       {/* ============================================================== */}
       {/* SECTION 5: CHECKLIST                                           */}
       {/* ============================================================== */}
+
+      {section === 'schedule' && (
+        <SchedulePanel
+          schedule={schedule}
+          windows={windows}
+          serverOffsetMs={serverOffsetMs}
+          onSaveSchedule={onSaveSchedule}
+        />
+      )}
 
       {section === 'checklist' && (
         <div className="bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-200 space-y-4 text-sm text-slate-700 leading-relaxed">
