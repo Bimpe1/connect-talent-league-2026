@@ -32,3 +32,6 @@ email/recipients*.csv
 email/unsubscribed*.csv
 email/sent-log.csv
 email/preview.html
+
+# Temporary output of scripts/record_walkthrough.cjs
+public/video_output/

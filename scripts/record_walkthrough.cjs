@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 
 async function main() {
+  // Records the animated walkthrough source (scripts/walkthrough/walkthrough-source.html) to a silent .webm.
+  // Then see scripts/walkthrough/README.md to add the captions and make the final MP4.
   const outputDir = path.resolve(__dirname, '../public/video_output');
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -12,13 +14,14 @@ async function main() {
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
   ];
-  const executablePath = edgePaths.find(p => fs.existsSync(p));
+  // Edge on Windows by default; set BROWSER_PATH to use another Chromium-based browser (macOS/Linux)
+  const executablePath = process.env.BROWSER_PATH || edgePaths.find(p => fs.existsSync(p));
   if (!executablePath) {
-    console.error('Edge executable not found');
+    console.error('No browser found. Install Edge, or set BROWSER_PATH to a Chrome/Chromium/Edge executable.');
     process.exit(1);
   }
 
-  console.log('Launching browser with Edge:', executablePath);
+  console.log('Launching browser:', executablePath);
   const browser = await chromium.launch({
     executablePath,
     headless: true,
@@ -38,7 +41,7 @@ async function main() {
   });
 
   const page = await context.newPage();
-  const htmlPath = path.resolve(__dirname, '../public/video.html');
+  const htmlPath = path.resolve(__dirname, 'walkthrough/walkthrough-source.html');
   const fileUrl = 'file:///' + htmlPath.replace(/\\/g, '/');
 
   console.log('Navigating to:', fileUrl);
@@ -54,9 +57,9 @@ async function main() {
     }
   });
 
-  // Total duration is 70 seconds. We'll wait 72 seconds to capture the full end scene.
-  console.log('Recording 72 seconds of motion walkthrough...');
-  const totalSeconds = 72;
+  // Total duration is 76 seconds. We'll wait 78 seconds to capture the full end scene.
+  console.log('Recording 78 seconds of motion walkthrough...');
+  const totalSeconds = 78;
   for (let s = 1; s <= totalSeconds; s++) {
     await page.waitForTimeout(1000);
     if (s % 10 === 0 || s === totalSeconds) {
