@@ -74,13 +74,14 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.profiles where id = auth.uid() and role = 'captain');
 $$;
 
--- Hard team capacity limits (per the official pack; 40 places). Enforced here, not just in the UI,
--- so two people racing for the last place can't both get it.
-create or replace function public.team_capacity(tid text) returns int
+-- The seven official teams. There is NO limit on team size: anyone can join the team of their choice (scores use a
+-- fair per-member average, so bigger and smaller teams compete evenly). The team name is derived from the id here,
+-- so it can't be forged from the browser.
+create or replace function public.team_label(tid text) returns text
 language sql immutable as $$
   select case tid
-    when 'phoenix' then 6 when 'vision' then 5 when 'unity' then 6 when 'hope' then 6
-    when 'spark' then 5 when 'talent_stars' then 6 when 'bridge' then 6 else null end;
+    when 'phoenix' then 'Phoenix' when 'vision' then 'Vision' when 'unity' then 'Unity' when 'hope' then 'Hope'
+    when 'spark' then 'Spark' when 'talent_stars' then 'Talent Stars' when 'bridge' then 'Bridge' else null end;
 $$;
 
 create or replace function public.is_approved() returns boolean
@@ -94,16 +95,9 @@ create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   tid text := new.raw_user_meta_data->>'team_id';
-  cap int  := public.team_capacity(tid);
 begin
-  if tid is not null and cap is null then
+  if tid is not null and public.team_label(tid) is null then
     raise exception 'Unknown team';
-  end if;
-  if cap is not null then
-    perform pg_advisory_xact_lock(hashtext('team:' || tid));  -- serialise concurrent sign-ups per team
-    if (select count(*) from public.profiles where team_id = tid and role = 'participant' and status <> 'rejected') >= cap then
-      raise exception 'Team is full';
-    end if;
   end if;
   insert into public.profiles (id, email, name, kind, team_id, team_name)
   values (
@@ -111,11 +105,14 @@ begin
     new.email,
     coalesce(nullif(trim(new.raw_user_meta_data->>'name'), ''), split_part(new.email, '@', 1)),
     case when new.raw_user_meta_data->>'kind' = 'volunteer' then 'volunteer' else 'learner' end,
-    new.raw_user_meta_data->>'team_id',
-    new.raw_user_meta_data->>'team_name'
+    tid,
+    public.team_label(tid)
   );
   return new;
 end $$;
+
+-- Upgrade: older versions limited each team's size with this function; it is no longer used.
+drop function if exists public.team_capacity(text);
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users

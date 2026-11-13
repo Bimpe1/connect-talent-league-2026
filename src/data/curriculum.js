@@ -15,13 +15,13 @@ export const CHARITY_INFO = {
 };
 
 export const TEAMS = [
-  { id: "phoenix", name: "Phoenix", capacity: 6, color: "text-red-700 bg-red-50 border-red-200" },
-  { id: "vision", name: "Vision", capacity: 5, color: "text-purple-700 bg-purple-50 border-purple-200" },
-  { id: "unity", name: "Unity", capacity: 6, color: "text-blue-700 bg-blue-50 border-blue-200" },
-  { id: "hope", name: "Hope", capacity: 6, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-  { id: "spark", name: "Spark", capacity: 5, color: "text-amber-700 bg-amber-50 border-amber-200" },
-  { id: "talent_stars", name: "Talent Stars", capacity: 6, color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
-  { id: "bridge", name: "Bridge", capacity: 6, color: "text-teal-700 bg-teal-50 border-teal-200" }
+  { id: "phoenix", name: "Phoenix", color: "text-red-700 bg-red-50 border-red-200" },
+  { id: "vision", name: "Vision", color: "text-purple-700 bg-purple-50 border-purple-200" },
+  { id: "unity", name: "Unity", color: "text-blue-700 bg-blue-50 border-blue-200" },
+  { id: "hope", name: "Hope", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+  { id: "spark", name: "Spark", color: "text-amber-700 bg-amber-50 border-amber-200" },
+  { id: "talent_stars", name: "Talent Stars", color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+  { id: "bridge", name: "Bridge", color: "text-teal-700 bg-teal-50 border-teal-200" }
 ];
 
 export const SCORING_RULES = {

@@ -86,7 +86,7 @@ export default function LeaderboardView({ participants }) {
                   <div>
                     <h4 className="text-base sm:text-lg font-bold text-slate-900">{team.name}</h4>
                     <span className="text-xs sm:text-sm text-slate-500 font-medium">
-                      {team.registeredCount} enrolled · {team.capacity} capacity · {team.rawTotalTP} total TP
+                      {team.registeredCount} enrolled · {team.rawTotalTP} total TP
                     </span>
                   </div>
                 </div>

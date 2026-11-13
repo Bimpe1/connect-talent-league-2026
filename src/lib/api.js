@@ -59,7 +59,7 @@ export const sendMagicLink = async ({ email, profile }) => {
     }
     // The database trigger rejects sign-ups for a full team or a taken name; Supabase reports it generically.
     if (/database error saving new user/i.test(error.message)) {
-      throw new Error('We could not create your account. Your display name may already be taken, or the team may have just filled up. Please refresh and try again.');
+      throw new Error('We could not create your account. Your display name may already be taken. Please choose a different name and try again.');
     }
     throw error;
   }
