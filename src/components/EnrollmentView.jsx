@@ -26,7 +26,7 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
   // Enrollment fields
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
-  const [consent, setConsent] = useState(true);
+  const [consent, setConsent] = useState(false); // consent must be an active choice (a pre-ticked box is not valid consent)
   const [role, setRole] = useState('learner'); // 'learner' or 'volunteer'
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [enrollError, setEnrollError] = useState('');
@@ -38,6 +38,7 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
   // Submission / Loading states
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState('');
+  const [sentKind, setSentKind] = useState('signin'); // 'enroll' | 'signin'
   const [teamCounts, setTeamCounts] = useState({});
 
   const totalEnrolled = TEAMS.reduce((n, t) => n + (teamCounts[t.id] || 0), 0);
@@ -176,6 +177,7 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
           team_name: team.name
         }
       });
+      setSentKind('enroll');
       setSentTo(cleanEmail);
     } catch (err) {
       triggerEnrollError(err.message || 'Could not complete registration. Please try again.');
@@ -198,6 +200,7 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
     setSending(true);
     try {
       await sendMagicLink({ email: cleanEmail });
+      setSentKind('signin');
       setSentTo(cleanEmail);
     } catch (err) {
       triggerSignInError(err.message || 'Could not send sign-in link. Please check your email and try again.');
@@ -220,6 +223,11 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
           <p className="text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
             We sent a secure sign-in link to <span className="font-bold text-slate-900">{sentTo}</span>. Open it on this device to enter the league and join your team.
           </p>
+          {sentKind === 'enroll' && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 max-w-sm mx-auto">
+              After you open the link, an admin will approve your registration before you can start the challenges.
+            </div>
+          )}
           <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-2xl text-xs text-purple-900 max-w-sm mx-auto">
             💡 Links usually arrive in seconds. If you don't see it right away, be sure to check your spam/junk folder.
           </div>
@@ -400,7 +408,7 @@ export default function EnrollmentView({ initialTab = 'enroll', onOpenCaptainLog
                       className="mt-1 w-5 h-5 rounded text-[#6d28d9] focus:ring-purple-500 border-slate-300"
                     />
                     <div className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
-                      <span>I agree to Connect Talent storing my email address securely for league participation, progress tracking, and reminders.</span>
+                      <span>I agree to Connect Talent storing my email address securely for league participation, progress tracking, and league updates. It is deleted after the programme.</span>
                       <span className="block text-[11px] text-slate-500 mt-1">
                         Only facilitators can view emails; your email is never shown on the public leaderboard.
                       </span>
