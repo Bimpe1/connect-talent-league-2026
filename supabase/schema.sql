@@ -257,6 +257,7 @@ alter table public.league_config add constraint schedule_times_valid check (
 -- Server clock, so the app never trusts the device's clock.
 create or replace function public.server_now() returns timestamptz
 language sql stable as $$ select now(); $$;
+revoke execute on function public.server_now() from public, anon;
 grant execute on function public.server_now() to authenticated;
 
 -- One row per challenge day (4 weeks x 7 days) with its opening/closing instants.
@@ -283,6 +284,9 @@ language sql stable security definer set search_path = public as $$
   cross join lateral (select s->'overrides'->(dt::text) as o) ov
   order by wk, idx;
 $$;
+-- Postgres grants EXECUTE to everyone by default (and Supabase also grants it to the public `anon` role),
+-- so revoke explicitly: only signed-in users may read the schedule.
+revoke execute on function public.challenge_windows() from public, anon;
 grant execute on function public.challenge_windows() to authenticated;
 
 -- Enforce the window on every submission (the UI lock is only a convenience).
