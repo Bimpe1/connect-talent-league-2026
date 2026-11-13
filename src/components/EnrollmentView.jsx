@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, LogIn, UserPlus, AlertCircle, Check, Mail, Clock, UserCheck, ShieldCheck, Lock, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, LogIn, UserPlus, AlertCircle, Check, Mail, Clock, UserCheck, ShieldCheck, Lock, Eye, EyeOff, HelpCircle, HeartHandshake } from 'lucide-react';
 import { TEAMS } from '../data/curriculum';
 import { hashPassword, verifyPassword } from '../utils/security';
 
@@ -10,6 +10,7 @@ export default function EnrollmentView({
   onOpenCaptainLogin 
 }) {
   const [tab, setTab] = useState('enroll'); // 'enroll' or 'signin'
+  const [guidedStep, setGuidedStep] = useState(1); // 1 to 5
 
   // Enrollment fields
   const [displayName, setDisplayName] = useState('');
@@ -45,9 +46,62 @@ export default function EnrollmentView({
     }, 50);
   };
 
+  // Handle Guided Wizard Step Progression
+  const handleNextStep = () => {
+    setEnrollError('');
+    if (guidedStep === 1) {
+      const cleanName = displayName.trim();
+      if (!cleanName) {
+        triggerEnrollError('Please enter your name to continue.');
+        return;
+      }
+      const isDuplicate = existingParticipants.some(
+        p => p.name && p.name.trim().toLowerCase() === cleanName.toLowerCase()
+      );
+      if (isDuplicate) {
+        triggerEnrollError(
+          `The display name "${cleanName}" is already registered. If this is your account, switch to Returning Sign-In. Otherwise, please add an initial (e.g. ${cleanName} B.).`
+        );
+        return;
+      }
+      setGuidedStep(2);
+    } else if (guidedStep === 2) {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail || !/\S+@\S+\.\S+/.test(cleanEmail)) {
+        triggerEnrollError('Please enter a valid email address (e.g. alex@gmail.com).');
+        return;
+      }
+      const emailInUse = existingParticipants.some(
+        p => p.email && p.email.trim().toLowerCase() === cleanEmail
+      );
+      if (emailInUse) {
+        triggerEnrollError(
+          `The email address "${cleanEmail}" is already registered. Please switch to Returning Sign-In to log in.`
+        );
+        return;
+      }
+      setGuidedStep(3);
+    } else if (guidedStep === 3) {
+      if (!password || password.length < 6) {
+        triggerEnrollError('Please enter a password of at least 6 characters.');
+        return;
+      }
+      setGuidedStep(4);
+    } else if (guidedStep === 4) {
+      setGuidedStep(5);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setEnrollError('');
+    if (guidedStep > 1) {
+      setGuidedStep(guidedStep - 1);
+    }
+  };
+
   // Handle New Participant Enrollment
   const handleEnrollSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setEnrollError('');
 
     const cleanName = displayName.trim();
@@ -272,7 +326,7 @@ export default function EnrollmentView({
             </div>
           </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="pt-2 flex justify-center">
             <button
               type="button"
               onClick={() => {
@@ -280,22 +334,9 @@ export default function EnrollmentView({
                 setTab('signin');
                 setSignInIdentifier(submittedForApproval.email || submittedForApproval.name);
               }}
-              className="px-6 py-3 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-950/20 transition active:scale-95"
+              className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#0a2558] to-[#6d28d9] hover:from-[#0d2e6e] hover:to-[#7c3aed] text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-950/20 transition active:scale-95"
             >
               Go to Sign-In Tab
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSubmittedForApproval(null);
-                setDisplayName('');
-                setEmail('');
-                setSelectedTeamId(null);
-                setTab('enroll');
-              }}
-              className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition"
-            >
-              Register Another Player
             </button>
           </div>
         </div>
@@ -334,216 +375,306 @@ export default function EnrollmentView({
           <div className="bg-white rounded-3xl p-5 sm:p-8 shadow-sm border border-slate-200 space-y-6">
         
         {/* ======================================================== */}
-        {/* TAB 1: ENROLL AS NEW                                     */}
+        {/* TAB 1: ENROLL AS NEW (STEP-BY-STEP GUIDED)               */}
         {/* ======================================================== */}
         {tab === 'enroll' && (
-          <form onSubmit={handleEnrollSubmit} className="space-y-6">
-            
-            {/* Display Name */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Display Name
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Jordan T."
-                value={displayName}
-                onChange={e => { setDisplayName(e.target.value); setEnrollError(''); }}
-                className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl px-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
-                required
-              />
-            </div>
-
-            {/* Email Address */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  placeholder="e.g. alex@gmail.com"
-                  value={email}
-                  onChange={e => { setEmail(e.target.value); setEnrollError(''); }}
-                  className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-4 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
-                  required
-                />
-                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Min 6 characters"
-                  value={password}
-                  onChange={e => { setPassword(e.target.value); setEnrollError(''); }}
-                  className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-11 pr-11 py-3 text-base text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none transition"
-                  required
-                />
-                <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Role Selection */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                Role
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole('learner')}
-                  className={`p-3.5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
-                    role === 'learner'
-                      ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <div>
-                    <span className="font-bold text-sm sm:text-base block">Learner</span>
-                    <span className="text-xs text-slate-500 font-normal">Building digital skills</span>
-                  </div>
-                  {role === 'learner' && <Check size={18} className="text-[#6d28d9]" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('volunteer')}
-                  className={`p-3.5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
-                    role === 'volunteer'
-                      ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <div>
-                    <span className="font-bold text-sm sm:text-base block">Volunteer</span>
-                    <span className="text-xs text-slate-500 font-normal">Supporting peers</span>
-                  </div>
-                  {role === 'volunteer' && <Check size={18} className="text-[#6d28d9]" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Team Selection */}
+          <div className="space-y-6">
+            {/* Step Indicator Header */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Select Team
-                </label>
-                <span className="text-[11px] font-semibold text-slate-500">
-                  {existingParticipants.length}/40 filled
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+                <span className="uppercase tracking-wider">
+                  Step {guidedStep} of 5 · {
+                    guidedStep === 1 ? "Your Name" :
+                    guidedStep === 2 ? "Your Email" :
+                    guidedStep === 3 ? "Create Password" :
+                    guidedStep === 4 ? "Your Role" : "Select Team"
+                  }
                 </span>
               </div>
+              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
+                <div 
+                  className="bg-gradient-to-r from-[#0a2558] to-[#6d28d9] h-full transition-all duration-300 rounded-full"
+                  style={{ width: `${(guidedStep / 5) * 100}%` }}
+                />
+              </div>
+            </div>
 
-              {!selectedTeamId && !allTeamsFull && (
-                <p className="text-xs text-purple-700 bg-purple-50 border border-purple-200 px-3.5 py-1.5 rounded-xl font-medium">
-                  Please click on one of the teams below to select your team.
-                </p>
-              )}
+                {/* STEP 1: What is your name? */}
+                {guidedStep === 1 && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
+                        Step 1 · Display Name
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading mt-2">
+                        What is your name?
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                        Enter your first name and last initial. This is what will appear on the friendly league board.
+                      </p>
+                    </div>
 
-              {allTeamsFull ? (
-                <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 text-amber-900 text-xs sm:text-sm font-medium">
-                  <strong>Notice:</strong> All teams have reached maximum capacity (40/40 places filled).
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {TEAMS.map(t => {
-                    const isSelected = selectedTeamId === t.id;
-                    const enrolledCount = existingParticipants.filter(p => p.teamId === t.id).length;
-                    const isFull = enrolledCount >= t.capacity;
+                    <div className="pt-1">
+                      <input
+                        type="text"
+                        placeholder="e.g. Jordan T."
+                        value={displayName}
+                        onChange={e => { setDisplayName(e.target.value); setEnrollError(''); }}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleNextStep(); } }}
+                        className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl px-5 py-4 text-base sm:text-lg text-slate-900 font-bold placeholder:text-slate-400 focus:outline-none transition shadow-2xs"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                )}
 
-                    return (
+                {/* STEP 2: What is your email? */}
+                {guidedStep === 2 && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
+                        Step 2 · Email Address
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading mt-2">
+                        What is your email address?
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                        You will use this to sign into your account and receive challenge reminders.
+                      </p>
+                    </div>
+
+                    <div className="relative pt-1">
+                      <input
+                        type="email"
+                        placeholder="e.g. alex@gmail.com"
+                        value={email}
+                        onChange={e => { setEmail(e.target.value); setEnrollError(''); }}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleNextStep(); } }}
+                        className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-12 pr-5 py-4 text-base sm:text-lg text-slate-900 font-bold placeholder:text-slate-400 focus:outline-none transition shadow-2xs"
+                        autoFocus
+                      />
+                      <Mail size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none mt-0.5" />
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: Create a password */}
+                {guidedStep === 3 && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
+                        Step 3 · Password
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading mt-2">
+                        Create a simple password
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                        Choose a password of at least 6 characters that you can easily remember.
+                      </p>
+                    </div>
+
+                    <div className="relative pt-1">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Min 6 characters"
+                        value={password}
+                        onChange={e => { setPassword(e.target.value); setEnrollError(''); }}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleNextStep(); } }}
+                        className="w-full border-2 border-slate-300 focus:border-[#6d28d9] focus:ring-4 focus:ring-purple-100 rounded-2xl pl-12 pr-12 py-4 text-base sm:text-lg text-slate-900 font-bold placeholder:text-slate-400 focus:outline-none transition shadow-2xs"
+                        autoFocus
+                      />
+                      <Lock size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none mt-0.5" />
                       <button
-                        key={t.id}
                         type="button"
-                        disabled={isFull}
-                        onClick={() => {
-                          if (!isFull) {
-                            setSelectedTeamId(t.id);
-                            setEnrollError('');
-                          }
-                        }}
-                        className={`p-3 rounded-xl border-2 text-left transition flex flex-col justify-between ${
-                          isFull
-                            ? 'border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-60'
-                            : isSelected
-                            ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm ring-2 ring-purple-300'
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none p-1"
+                      >
+                        {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 4: Choose your role */}
+                {guidedStep === 4 && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
+                        Step 4 · Your Role
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading mt-2">
+                        How would you like to take part?
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                        Choose whether you are learning digital skills or volunteering to help peers.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setRole('learner')}
+                        className={`p-5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                          role === 'learner'
+                            ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm ring-2 ring-purple-200'
                             : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-bold text-sm block">{t.name}</span>
-                          {isSelected && !isFull && (
-                            <span className="w-4 h-4 rounded-full bg-[#6d28d9] text-white flex items-center justify-center text-[10px]">
-                              <Check size={10} />
-                            </span>
-                          )}
-                          {isFull && (
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">
-                              Full
-                            </span>
-                          )}
+                        <div>
+                          <span className="font-extrabold text-base sm:text-lg block">Learner</span>
+                          <span className="text-xs text-slate-500 font-normal mt-0.5 block">
+                            Building digital skills &amp; doing daily challenges
+                          </span>
                         </div>
-                        <span className="text-[11px] text-slate-400 mt-1">
-                          {enrolledCount}/{t.capacity} places {isFull ? '• Closed' : '• Open'}
-                        </span>
+                        {role === 'learner' && <Check size={22} className="text-[#6d28d9] flex-shrink-0" />}
                       </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
-            {/* Error Notification (At bottom directly above submit button) */}
-            {enrollError && (
-              <div
-                id="enroll-error-bottom"
-                tabIndex={-1}
-                className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium shadow-sm transition outline-none"
-              >
-                <AlertCircle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <span className="font-semibold block leading-relaxed">{enrollError}</span>
-                  {(enrollError.includes('already registered') || enrollError.includes('already enrolled')) && (
+                      <button
+                        type="button"
+                        onClick={() => setRole('volunteer')}
+                        className={`p-5 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                          role === 'volunteer'
+                            ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm ring-2 ring-purple-200'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <span className="font-extrabold text-base sm:text-lg block">Volunteer / Mentor</span>
+                          <span className="text-xs text-slate-500 font-normal mt-0.5 block">
+                            Supporting fellow learners &amp; encouraging peers
+                          </span>
+                        </div>
+                        {role === 'volunteer' && <Check size={22} className="text-[#6d28d9] flex-shrink-0" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 5: Choose your team */}
+                {guidedStep === 5 && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
+                        Step 5 · Choose Team
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading mt-2">
+                        Pick your team
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                        Select an available team with open spaces. Teammates learn and earn points together.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                      {TEAMS.map(t => {
+                        const enrolledCount = existingParticipants.filter(p => p.teamId === t.id).length;
+                        const isFull = enrolledCount >= t.capacity;
+                        const isSelected = selectedTeamId === t.id;
+
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            disabled={isFull}
+                            onClick={() => {
+                              if (!isFull) {
+                                setSelectedTeamId(t.id);
+                                setEnrollError('');
+                              }
+                            }}
+                            className={`p-3.5 rounded-2xl border-2 text-left transition flex flex-col justify-between ${
+                              isFull
+                                ? 'border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-60'
+                                : isSelected
+                                ? 'border-[#6d28d9] bg-purple-50/70 text-[#0a2558] shadow-sm ring-2 ring-purple-300'
+                                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-bold text-sm block">{t.name}</span>
+                              {isSelected && !isFull && (
+                                <span className="w-5 h-5 rounded-full bg-[#6d28d9] text-white flex items-center justify-center text-xs">
+                                  <Check size={12} />
+                                </span>
+                              )}
+                              {isFull && (
+                                <span className="text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">
+                                  Full
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-slate-400 mt-2">
+                              {enrolledCount}/{t.capacity} places {isFull ? '• Closed' : '• Open'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Notification */}
+                {enrollError && (
+                  <div
+                    id="enroll-error-bottom"
+                    tabIndex={-1}
+                    className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs sm:text-sm font-medium shadow-sm transition outline-none"
+                  >
+                    <AlertCircle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <span className="font-semibold block leading-relaxed">{enrollError}</span>
+                      {(enrollError.includes('already registered') || enrollError.includes('already enrolled')) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTab('signin');
+                            setSignInIdentifier(email.trim() || displayName.trim());
+                            setSignInError('');
+                            setEnrollError('');
+                          }}
+                          className="inline-block mt-2 font-bold underline text-rose-900 hover:text-rose-950 text-xs sm:text-sm"
+                        >
+                          Switch to Returning Sign-In →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Guided Navigation Buttons */}
+                <div className="flex items-center gap-3 pt-2">
+                  {guidedStep > 1 && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setTab('signin');
-                        setSignInIdentifier(email.trim() || displayName.trim());
-                        setSignInError('');
-                        setEnrollError('');
-                      }}
-                      className="inline-block mt-2 font-bold underline text-rose-900 hover:text-rose-950 text-xs sm:text-sm"
+                      onClick={handlePrevStep}
+                      className="px-5 py-3.5 border-2 border-slate-200 hover:border-slate-300 text-slate-700 rounded-2xl text-sm sm:text-base font-bold flex items-center gap-2 transition active:scale-95 bg-white"
                     >
-                      Switch to Returning Sign-In →
+                      <ArrowLeft size={18} />
+                      <span>Back</span>
+                    </button>
+                  )}
+
+                  {guidedStep < 5 ? (
+                    <button
+                      type="button"
+                      onClick={handleNextStep}
+                      className="flex-1 py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95"
+                    >
+                      <span>Continue</span>
+                      <ArrowRight size={18} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleEnrollSubmit}
+                      disabled={allTeamsFull}
+                      className="flex-1 py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span>{allTeamsFull ? 'League is Full' : 'Complete Registration 🎉'}</span>
                     </button>
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={allTeamsFull}
-              className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-500/25 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>{allTeamsFull ? 'League is Full' : 'Complete Registration'}</span>
-              {!allTeamsFull && <ArrowRight size={18} />}
-            </button>
-          </form>
+          </div>
         )}
 
         {/* ======================================================== */}
@@ -640,16 +771,6 @@ export default function EnrollmentView({
       </div>
       </>
       )}
-
-      {/* Captain Sign-In Link */}
-      <div className="text-center pt-2">
-        <button
-          onClick={onOpenCaptainLogin}
-          className="text-xs sm:text-sm font-bold text-[#0a2558] bg-indigo-50/80 hover:bg-indigo-100/90 border border-indigo-200/90 px-4 py-2.5 rounded-xl transition shadow-sm"
-        >
-          Facilitator / Captain Sign-In &amp; Register
-        </button>
-      </div>
     </div>
   );
 }

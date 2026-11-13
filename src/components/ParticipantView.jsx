@@ -55,6 +55,15 @@ export default function ParticipantView({
   const [lastSubmittedTitle, setLastSubmittedTitle] = useState('');
   const [challengeFormError, setChallengeFormError] = useState('');
 
+  // Senior Walkthrough & How to Use Modal State (opens automatically on first visit)
+  const [showHowToUseModal, setShowHowToUseModal] = useState(() => {
+    try {
+      return !localStorage.getItem(`ct_seen_guide_${currentUser?.id || 'guest'}`);
+    } catch {
+      return false;
+    }
+  });
+
   // In-Person Attendance State
   const [attendanceDay, setAttendanceDay] = useState('Wednesday');
   const [attendanceText, setAttendanceText] = useState('');
@@ -192,6 +201,16 @@ export default function ParticipantView({
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
+            {/* How to Use / Senior Guide Button */}
+            <button
+              type="button"
+              onClick={() => setShowHowToUseModal(true)}
+              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 border border-white/25 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition active:scale-95 shadow-2xs"
+            >
+              <HelpCircle size={15} className="text-amber-300" />
+              <span>How It Works</span>
+            </button>
+
             {/* Streak Counter */}
             <div className="flex items-center gap-1.5 bg-white/10 border border-white/20 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold">
               <Flame size={16} className="text-amber-400 fill-amber-400 animate-pulse" />
@@ -850,6 +869,114 @@ export default function ParticipantView({
             >
               Keep Going!
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* SENIOR-FRIENDLY "HOW IT WORKS" WALKTHROUGH MODAL               */}
+      {/* ============================================================== */}
+      {showHowToUseModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3.5 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 relative max-h-[90vh] overflow-y-auto">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowHowToUseModal(false);
+                try {
+                  localStorage.setItem(`ct_seen_guide_${currentUser?.id || 'guest'}`, 'true');
+                } catch {}
+              }}
+              className="absolute right-5 top-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
+              aria-label="Close guide"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Header */}
+            <div className="text-center space-y-2 pt-1">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0a2558] to-[#6d28d9] text-white flex items-center justify-center mx-auto shadow-md shadow-indigo-900/20">
+                <Sparkles size={28} className="text-amber-300" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading">
+                Welcome to Connect Talent!
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-sm mx-auto">
+                Here is how everything works in 3 easy steps. You cannot break anything here!
+              </p>
+            </div>
+
+            {/* 3 Simple Steps */}
+            <div className="space-y-3.5 text-left">
+              {/* Step 1 */}
+              <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-4 flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-xl bg-[#0a2558] text-white flex items-center justify-center font-black text-sm flex-shrink-0 mt-0.5">
+                  1
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
+                    Read Today's Short Question
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                    Every weekday morning, a new challenge appears. It takes just 5 to 10 minutes to think about.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm flex-shrink-0 mt-0.5">
+                  2
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
+                    Answer Any Way You Like
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                    Type a few sentences, OR press the microphone to talk, OR write on paper and upload a photo!
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-700 text-white flex items-center justify-center font-black text-sm flex-shrink-0 mt-0.5">
+                  3
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
+                    Earn Points for Your Team
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                    There are no wrong answers—your effort and curiosity are what count. Every entry scores points!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Reassurance Banner */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+              <span className="text-xs text-amber-900 font-semibold">
+                🌟 Go at your own pace. Have fun trying something new!
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowHowToUseModal(false);
+                  try {
+                    localStorage.setItem(`ct_seen_guide_${currentUser?.id || 'guest'}`, 'true');
+                  } catch {}
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-[#0a2558] hover:from-[#163573] to-[#6d28d9] hover:to-[#5b21b6] text-white rounded-2xl text-base font-bold shadow-md shadow-indigo-500/25 transition active:scale-95"
+              >
+                Got It, Let's Start! 🚀
+              </button>
+            </div>
           </div>
         </div>
       )}
