@@ -57,6 +57,41 @@ The existing `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` variables are reused
 `vercel dev` (the normal `npm run dev` does not run server functions). Use the same mailbox as the sign-in emails: it is
 already known to deliver.
 
+## Email reminders ("closes at 8pm")
+At **6:30pm UK time, Monday to Friday**, people who have **not yet submitted** today's challenge get one email saying it
+closes at 8pm. Everyone gets a one-tap "stop these reminders" link. Weekends, locked days and any time after the window
+closes send nothing (the database decides, so a late-running job can never send a pointless "last call").
+It is **off until you switch it on**, and it cannot email anyone twice in a day.
+
+How it works: a scheduled GitHub job (`.github/workflows/reminders.yml`) calls `/api/send-reminders` on the site, which asks
+the database who needs a reminder and sends the emails through the same mailbox as the approval email. No powerful
+database key is used anywhere: the database functions only answer when given a secret that is stored there as a hash.
+
+**Setup, in this order:**
+1. **Make two long random secrets** (for example run `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+   twice). Call them `DB_SECRET` and `CRON_SECRET`. Keep them out of chat and email.
+2. **Run the latest `schema.sql`** in the Supabase SQL Editor, then run this once (put your `DB_SECRET` in place of the text):
+   ```sql
+   insert into public.job_secrets (name, value)
+   values ('reminders', encode(sha256(convert_to('PASTE-DB_SECRET-HERE', 'UTF8')), 'hex'))
+   on conflict (name) do update set value = excluded.value;
+   ```
+3. **Vercel, Environment Variables** (Production, mark the secrets *Sensitive*): `REMINDER_DB_SECRET` = your `DB_SECRET`,
+   `CRON_SECRET` = your `CRON_SECRET`. (`SMTP_*` are already set for the approval email.) Leave `REMINDERS_ENABLED` unset
+   for now, then redeploy.
+4. **GitHub, repository Settings, Secrets and variables, Actions:** add a secret `CRON_SECRET` with the same value.
+5. **Try it without sending anything:** GitHub, Actions tab, "Email reminders", **Run workflow** with `dry_run = true`. Set
+   `REMINDERS_ENABLED` to `true` in Vercel (and redeploy) first, otherwise it reports "switched off". During a weekday
+   between 9am and 8pm UK time it should list how many people would be emailed.
+6. **Switch it on** by leaving `REMINDERS_ENABLED=true`. The 6:30pm schedule then runs by itself. **Switch it off** by
+   setting it to anything else (or disabling the workflow).
+
+Notes: GitHub can start scheduled jobs a few minutes late, which is why it is set for 6:30pm. Someone who clicks
+"stop these reminders" is recorded in `profiles.reminders_off`; to turn it back on for them:
+`update public.profiles set reminders_off = false where email = 'them@example.org';`.
+A morning "today's challenge is live" email is built in (`kind: "live"`) but not scheduled; to add it, add a second
+schedule line `'0 9 * * 1-5'` and pass `live` in the workflow.
+
 ## Things to know
 - **There is no limit on team size.** Anyone can join the team of their choice; team scores use a per-member average so
   teams of different sizes compete fairly.

@@ -1,0 +1,52 @@
+name: Email reminders
+
+# Calls the site's /api/send-reminders function at 6:30pm UK time on weekdays: "today's challenge closes at 8pm",
+# sent only to approved participants who have not submitted yet. Safe by default: it does nothing until the
+# CRON_SECRET secret exists here AND REMINDERS_ENABLED=true is set in Vercel. Run it by hand (Actions tab, "Run
+# workflow") with dry_run=true to see who WOULD be emailed without sending anything.
+on:
+  schedule:
+    # 18:30 UTC, Monday to Friday. In the UK that is 6:30pm until the clocks change; the league ends on 13 December,
+    # which is before that, so UTC and UK time are the same for the whole league.
+    - cron: '30 18 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: 'Which reminder: closing (6:30pm, not-yet-submitted only) or live (everyone)'
+        default: 'closing'
+      dry_run:
+        description: 'true = only list who would be emailed (nothing is sent)'
+        default: 'true'
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Send reminders
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          KIND: ${{ github.event.inputs.kind }}
+          DRY: ${{ github.event.inputs.dry_run }}
+        run: |
+          set -u
+          KIND="${KIND:-closing}"; DRY="${DRY:-false}"; SITE_URL="${SITE_URL:-https://connect-talent-league-2026.vercel.app}"
+          case "$KIND" in closing|live) ;; *) echo "kind must be closing or live"; exit 1;; esac
+          case "$DRY" in true|false) ;; *) echo "dry_run must be true or false"; exit 1;; esac
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "CRON_SECRET is not set, so reminders are not configured yet. Nothing to do."
+            exit 0
+          fi
+          # The function sends a batch at a time (so each call finishes quickly); keep calling until nobody is left.
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            echo "Batch $i (kind: $KIND, dry run: $DRY)"
+            out=$(curl -sS --fail-with-body -m 60 -X POST "$SITE_URL/api/send-reminders" \
+              -H "Authorization: Bearer $CRON_SECRET" -H "Content-Type: application/json" \
+              -d "{\"kind\":\"$KIND\",\"dryRun\":$DRY}") || { echo "$out"; exit 1; }
+            echo "$out" | jq -c '.'
+            if [ "$DRY" = "true" ] || [ "$(echo "$out" | jq -r '.skipped // false')" = "true" ]; then exit 0; fi
+            sent=$(echo "$out" | jq -r '.sent // 0'); failed=$(echo "$out" | jq -r '.failed // 0'); remaining=$(echo "$out" | jq -r '.remaining // 0')
+            if [ "$sent" -eq 0 ] && [ "$failed" -gt 0 ]; then echo "Every email in this batch failed."; exit 1; fi
+            if [ "$remaining" -le 0 ] || [ "$sent" -eq 0 ]; then exit 0; fi
+          done
