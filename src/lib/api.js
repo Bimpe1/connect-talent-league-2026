@@ -234,3 +234,19 @@ export const setRegistrationStatus = async (id, status) => {
   const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
   fail(error);
 };
+
+// After a facilitator approves someone, ask the server to send them the "you're approved" email. The server checks
+// that the caller really is a facilitator and that the person really is approved; the browser supplies no email text.
+export const notifyApproved = async (participantId) => {
+  const { data } = await supabase.auth.getSession();
+  const res = await fetch('/api/notify-approved', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token || ''}` },
+    body: JSON.stringify({ participantId }),
+  });
+  if (!res.ok) {
+    let msg = 'The approval email could not be sent.';
+    try { msg = (await res.json()).error || msg; } catch { /* keep the default */ }
+    throw new Error(msg);
+  }
+};

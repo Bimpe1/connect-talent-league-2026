@@ -12,6 +12,7 @@ create table if not exists public.profiles (
   kind        text not null default 'learner' check (kind in ('learner','volunteer')),
   role        text not null default 'participant' check (role in ('participant','captain')),
   status      text not null default 'pending' check (status in ('pending','approved','rejected')), -- captain approves new sign-ups
+  approval_emailed_at timestamptz,                                                              -- set once the 'you're approved' email has been sent
   team_id     text,
   team_name   text,
   attendance  jsonb not null default '{"prep":true,"wk1":false,"wk2":false,"wk3":false,"wk4":false}',
@@ -25,6 +26,8 @@ create table if not exists public.profiles (
 alter table public.profiles add column if not exists status text not null default 'approved'
   check (status in ('pending','approved','rejected'));
 alter table public.profiles alter column status set default 'pending';
+-- Records that the approval email went out, so nobody is emailed twice (added after the first launch).
+alter table public.profiles add column if not exists approval_emailed_at timestamptz;
 
 drop index if exists public.profiles_name_unique;
 -- display names are unique among people who haven't been rejected
@@ -357,6 +360,96 @@ drop policy if exists evidence_select on storage.objects;
 create policy evidence_select on storage.objects for select to authenticated
   using (bucket_id = 'evidence'
          and ((storage.foldername(name))[1] = auth.uid()::text or public.is_captain()));
+
+-- ---------------------------------------------------------------
+-- Email reminders ("closes at 8pm" for people who have not submitted yet; "today's challenge is live" for everyone)
+-- A scheduled job (GitHub Actions) asks a Vercel function, which asks these functions. They do nothing without a
+-- secret that only the owner knows (stored here ONLY as a hash), so no powerful database key is needed anywhere.
+-- ---------------------------------------------------------------
+alter table public.profiles add column if not exists reminders_off boolean not null default false;  -- set by the unsubscribe link
+
+create table if not exists public.job_secrets (name text primary key, value text not null);  -- sha256 hex of each secret
+alter table public.job_secrets enable row level security;       -- no policies: only the owner (SQL editor) can read or change it
+revoke all on public.job_secrets from anon, authenticated;
+
+create table if not exists public.reminder_log (                -- one row per person, kind and day: nobody is emailed twice
+  participant_id uuid not null references public.profiles(id) on delete cascade,
+  kind           text not null check (kind in ('live','closing')),
+  day            date not null,
+  sent_at        timestamptz not null default now(),
+  primary key (participant_id, kind, day)
+);
+alter table public.reminder_log enable row level security;      -- no policies: not readable or writable from the browser
+revoke all on public.reminder_log from anon, authenticated;
+
+create or replace function public.reminders_authorized(p_secret text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.job_secrets
+                  where name = 'reminders' and value = encode(sha256(convert_to(coalesce(p_secret, ''), 'UTF8')), 'hex'));
+$$;
+revoke all on function public.reminders_authorized(text) from public, anon, authenticated;
+
+-- Who should get this reminder today? Only while today's weekday challenge is open (so a late-running job can never
+-- send a pointless "closes at 8pm" after 8pm, and weekends / dates outside the league return nobody).
+create or replace function public.reminder_candidates(p_secret text, p_kind text, p_day date)
+returns table (participant_id uuid, email text, name text, team_name text, week_number int, day_name text, closes_at timestamptz)
+language plpgsql stable security definer set search_path = public as $$
+declare w record;
+begin
+  if not public.reminders_authorized(p_secret) then raise exception 'not authorised'; end if;
+  if p_kind not in ('live', 'closing') then raise exception 'unknown kind'; end if;
+  select * into w from public.challenge_windows() cw
+   where cw.day_date = p_day and not cw.ungated and not cw.locked and now() >= cw.opens_at and now() <= cw.closes_at;
+  if not found then return; end if;
+  return query
+    select p.id, p.email, p.name, p.team_name, w.week_number, w.day_name, w.closes_at
+      from public.profiles p
+     where p.role = 'participant' and p.status = 'approved' and not p.reminders_off
+       and not exists (select 1 from public.reminder_log l where l.participant_id = p.id and l.kind = p_kind and l.day = p_day)
+       and (p_kind = 'live' or not exists (
+             select 1 from public.submissions s
+              where s.participant_id = p.id and s.week_number = w.week_number
+                and s.challenge_day = w.day_name and not s.is_attendance))
+     order by p.created_at;
+end $$;
+
+-- Claim a reminder BEFORE sending it (true = you may send; false = already claimed), release it if sending fails.
+create or replace function public.reminder_claim(p_secret text, p_kind text, p_day date, p_participant uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if not public.reminders_authorized(p_secret) then raise exception 'not authorised'; end if;
+  insert into public.reminder_log (participant_id, kind, day) values (p_participant, p_kind, p_day) on conflict do nothing;
+  get diagnostics n = row_count;
+  return n = 1;
+end $$;
+
+create or replace function public.reminder_release(p_secret text, p_kind text, p_day date, p_participant uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.reminders_authorized(p_secret) then raise exception 'not authorised'; end if;
+  delete from public.reminder_log where participant_id = p_participant and kind = p_kind and day = p_day;
+end $$;
+
+create or replace function public.reminder_unsubscribe(p_secret text, p_participant uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if not public.reminders_authorized(p_secret) then raise exception 'not authorised'; end if;
+  update public.profiles set reminders_off = true where id = p_participant and role = 'participant';
+  get diagnostics n = row_count;
+  return n = 1;
+end $$;
+
+revoke all on function public.reminder_candidates(text, text, date), public.reminder_claim(text, text, date, uuid),
+  public.reminder_release(text, text, date, uuid), public.reminder_unsubscribe(text, uuid) from public;
+grant execute on function public.reminder_candidates(text, text, date), public.reminder_claim(text, text, date, uuid),
+  public.reminder_release(text, text, date, uuid), public.reminder_unsubscribe(text, uuid) to anon, authenticated;
+
+-- ONE-TIME SETUP (run by the owner; choose a long random value and keep it for Vercel as REMINDER_DB_SECRET):
+--   insert into public.job_secrets (name, value)
+--   values ('reminders', encode(sha256(convert_to('PASTE-YOUR-LONG-RANDOM-SECRET-HERE', 'UTF8')), 'hex'))
+--   on conflict (name) do update set value = excluded.value;
 
 -- ---------------------------------------------------------------
 -- Make someone a Captain (run manually AFTER they have signed in once):
