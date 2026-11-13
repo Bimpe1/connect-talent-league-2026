@@ -889,7 +889,7 @@ export default function ParticipantView({
           setShowHowToUseModal(false);
           try {
             localStorage.setItem(`ct_seen_guide_${currentUser?.id || 'guest'}`, 'true');
-          } catch {}
+          } catch { /* storage unavailable: the guide may show again */ }
         }}
       />
     </div>
